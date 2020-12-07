@@ -1,6 +1,6 @@
 {
   "name": "aloud-comments",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Web Component commenting engine based on Firebase (and shadow DOM)",
   "repository": "github:aloud-comments/aloud-comments",
   "license": "MIT",
@@ -9,8 +9,9 @@
     "email": "polv@polv.cc",
     "url": "https://www.polv.cc"
   },
+  "homepage": "https://aloud-comments.github.io/aloud-comments",
   "main": "dist/index.cjs.js",
-  "unpkg": "dist/aloud-comments/aloud-comments.js",
+  "unpkg": "dist/aloud-comments/aloud-comments.esm.js",
   "module": "dist/custom-elements/index.js",
   "types": "dist/custom-elements/index.d.ts",
   "files": [
