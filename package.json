@@ -18,13 +18,12 @@
     "loader/"
   ],
   "scripts": {
-    "build": "stencil build --docs",
+    "prepare": "stencil build --docs",
     "dev": "stencil build --dev --watch --serve",
     "generate": "stencil generate",
-    "stencil": "stencil",
     "test": "stencil test --spec --e2e",
     "test.watch": "stencil test --spec --e2e --watchAll",
-    "prepack": "npm build"
+    "build": "pnpm prepare"
   },
   "dependencies": {
     "@stencil/core": "^2.0.1",

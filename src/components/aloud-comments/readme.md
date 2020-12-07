@@ -22,18 +22,19 @@
 
 ### Depends on
 
-- aloud-subentry
-- aloud-entry
 - aloud-editor
+- aloud-entry
 
 ### Graph
 ```mermaid
 graph TD;
-  aloud-comments --> aloud-subentry
-  aloud-comments --> aloud-entry
   aloud-comments --> aloud-editor
-  aloud-subentry --> aloud-editor
+  aloud-comments --> aloud-entry
   aloud-entry --> aloud-editor
+  aloud-entry --> aloud-subentry
+  aloud-entry --> aloud-entry
+  aloud-subentry --> aloud-editor
+  aloud-subentry --> aloud-subentry
   style aloud-comments fill:#f9f,stroke:#333,stroke-width:4px
 ```
 
