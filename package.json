@@ -1,21 +1,18 @@
 {
   "name": "aloud-comments",
   "version": "0.1.0",
-  "description": "Commenting engine based on Firebase and REST API",
+  "description": "Web Component commenting engine based on Firebase (and shadow DOM)",
+  "repository": "github:aloud-comments/aloud-comments",
+  "license": "MIT",
   "author": {
-    "email": "polv@polv.cc",
     "name": "Pacharapol Withayasakpunt",
+    "email": "polv@polv.cc",
     "url": "https://www.polv.cc"
   },
-  "repository": "github:patarapolw/aloud",
   "main": "dist/index.cjs.js",
-  "module": "dist/custom-elements/index.js",
-  "es2015": "dist/esm/index.mjs",
-  "es2017": "dist/esm/index.mjs",
-  "types": "dist/custom-elements/index.d.ts",
-  "collection": "dist/collection/collection-manifest.json",
-  "collection:main": "dist/collection/index.js",
   "unpkg": "dist/aloud-comments/aloud-comments.js",
+  "module": "dist/custom-elements/index.js",
+  "types": "dist/custom-elements/index.d.ts",
   "files": [
     "dist/",
     "loader/"
@@ -23,10 +20,10 @@
   "scripts": {
     "build": "stencil build --docs",
     "dev": "stencil build --dev --watch --serve",
-    "test": "stencil test --spec --e2e",
-    "test.watch": "stencil test --spec --e2e --watchAll",
     "generate": "stencil generate",
-    "stencil": "stencil"
+    "stencil": "stencil",
+    "test": "stencil test --spec --e2e",
+    "test.watch": "stencil test --spec --e2e --watchAll"
   },
   "dependencies": {
     "@stencil/core": "^2.0.1",
@@ -41,7 +38,6 @@
     "scope-css": "github:patarapolw/scope-css",
     "showdown": "^1.9.1"
   },
-  "license": "MIT",
   "devDependencies": {
     "@types/codemirror": "^0.0.101",
     "@types/dompurify": "^2.0.4",
@@ -49,18 +45,23 @@
     "@types/showdown": "^1.9.3",
     "faker": "^5.1.0",
     "firebase": "^8.1.2",
-    "import-sort-parser-typescript": "^6.0.0"
+    "import-sort-parser-typescript": "^6.0.0",
+    "prettier": "^2.2.1"
+  },
+  "peerDependencies": {
+    "firebase": "^8.1.2"
   },
   "optionalDependencies": {
     "faker": "^5.1.0"
   },
+  "collection": "dist/collection/collection-manifest.json",
+  "collection:main": "dist/collection/index.js",
+  "es2015": "dist/esm/index.mjs",
+  "es2017": "dist/esm/index.mjs",
   "importSort": {
     ".ts,.tsx": {
       "parser": "typescript",
       "style": "module"
     }
-  },
-  "peerDependencies": {
-    "firebase": "^8.1.2"
   }
 }
