@@ -7,15 +7,14 @@
 
 ## Properties
 
-| Property                  | Attribute  | Description                                                                                                        | Type                                                              | Default          |
-| ------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | ---------------- |
-| `_api`                    | `api`      | API configuration. Will be `yaml.safeLoad()`  Requires either string version in HTML or Object version in JSX      | `string`                                                          | `undefined`      |
-| `_firebase`               | `firebase` | Firebase configuration. Will be `yaml.safeLoad()`  Requires either string version in HTML or Object version in JSX | `string`                                                          | `undefined`      |
-| `api` _(required)_        | --         | API configuration                                                                                                  | `{ init: string; post: string; update: string; delete: string; }` | `undefined`      |
-| `axios`                   | --         | Axios object. Can be ones configured with CSRF or auth.                                                            | `AxiosInstance`                                                   | `axios.create()` |
-| `debug`                   | `debug`    |                                                                                                                    | `boolean`                                                         | `false`          |
-| `firebase` _(required)_   | --         | Firebase configuration                                                                                             | `{ [k: string]: unknown; }`                                       | `undefined`      |
-| `firebaseui` _(required)_ | --         |                                                                                                                    | `AuthUI`                                                          | `undefined`      |
+| Property                | Attribute  | Description                                                                                                     | Type                                 | Default                                                                                         |
+| ----------------------- | ---------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `_firebase`             | `firebase` | Firebase configuration. Will be `JSON.parse()`  Requires either string version in HTML or Object version in JSX | `string`                             | `undefined`                                                                                     |
+| `api`                   | --         | API configuration                                                                                               | `IApi`                               | `{     // eslint-disable-next-line @typescript-eslint/no-explicit-any     get: null as any   }` |
+| `debug`                 | `debug`    | Whether to generate random entries  Requires `faker` to be installed.                                           | `boolean`                            | `false`                                                                                         |
+| `firebase` _(required)_ | --         | Firebase configuration                                                                                          | `{ [k: string]: unknown; }`          | `undefined`                                                                                     |
+| `firebaseui`            | --         | Custom `firebaseui.auth.AuthUI` object                                                                          | `AuthUI`                             | `undefined`                                                                                     |
+| `parser`                | --         |                                                                                                                 | `{ parse: (md: string) => string; }` | `undefined`                                                                                     |
 
 
 ## Dependencies

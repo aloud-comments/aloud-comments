@@ -6,17 +6,12 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { IApi, IFirebaseConfig } from "./components/aloud-comments/aloud-comments";
-import { IApi as IApi1, IEntry, IFirebaseConfig as IFirebaseConfig1 } from "./components/aloud-comments/aloud-comments";
-import { IAuthor } from "./utils/faker";
-import { AxiosInstance } from "axios";
+import { IApi as IApi1, IFirebaseConfig as IFirebaseConfig1 } from "./components/aloud-comments/aloud-comments";
+import { IAuthor, IPost } from "./utils/faker";
 export namespace Components {
     interface AloudComments {
         /**
-          * API configuration. Will be `yaml.safeLoad()`  Requires either string version in HTML or Object version in JSX
-         */
-        "_api": string;
-        /**
-          * Firebase configuration. Will be `yaml.safeLoad()`  Requires either string version in HTML or Object version in JSX
+          * Firebase configuration. Will be `JSON.parse()`  Requires either string version in HTML or Object version in JSX
          */
         "_firebase": string;
         /**
@@ -24,19 +19,27 @@ export namespace Components {
          */
         "api": IApi;
         /**
-          * Axios object. Can be ones configured with CSRF or auth.
+          * Whether to generate random entries  Requires `faker` to be installed.
          */
-        "axios": AxiosInstance;
         "debug": boolean;
         /**
           * Firebase configuration
          */
         "firebase": IFirebaseConfig;
-        "firebaseui": firebaseui.auth.AuthUI;
+        /**
+          * Custom `firebaseui.auth.AuthUI` object
+         */
+        "firebaseui"?: firebaseui.auth.AuthUI;
+        "parser": {
+    parse: (md: string) => string;
+  };
     }
     interface AloudEditor {
         "firebase": IFirebaseConfig;
         "getValue": () => Promise<string>;
+        "parser": {
+    parse: (md: string) => string;
+  };
         /**
           * Markdown to be parsed in-and-out of the editor  Use `.getValue()` to get and update the value
          */
@@ -44,19 +47,23 @@ export namespace Components {
     }
     interface AloudEntry {
         "api": IApi;
-        "axios": AxiosInstance;
         "depth": number;
-        "entry": IEntry;
+        "entry": IPost;
         "firebase": IFirebaseConfig;
-        "user": IAuthor;
+        "parser": {
+    parse: (md: string) => string;
+  };
+        "user"?: IAuthor;
     }
     interface AloudSubentry {
         "api": IApi;
-        "axios": AxiosInstance;
-        "entry": IEntry;
+        "entry": IPost;
         "firebase": IFirebaseConfig;
         "parent": IAuthor;
-        "user": IAuthor;
+        "parser": {
+    parse: (md: string) => string;
+  };
+        "user"?: IAuthor;
     }
 }
 declare global {
@@ -94,30 +101,34 @@ declare global {
 declare namespace LocalJSX {
     interface AloudComments {
         /**
-          * API configuration. Will be `yaml.safeLoad()`  Requires either string version in HTML or Object version in JSX
-         */
-        "_api"?: string;
-        /**
-          * Firebase configuration. Will be `yaml.safeLoad()`  Requires either string version in HTML or Object version in JSX
+          * Firebase configuration. Will be `JSON.parse()`  Requires either string version in HTML or Object version in JSX
          */
         "_firebase"?: string;
         /**
           * API configuration
          */
-        "api": IApi;
+        "api"?: IApi;
         /**
-          * Axios object. Can be ones configured with CSRF or auth.
+          * Whether to generate random entries  Requires `faker` to be installed.
          */
-        "axios"?: AxiosInstance;
         "debug"?: boolean;
         /**
           * Firebase configuration
          */
         "firebase": IFirebaseConfig;
-        "firebaseui": firebaseui.auth.AuthUI;
+        /**
+          * Custom `firebaseui.auth.AuthUI` object
+         */
+        "firebaseui"?: firebaseui.auth.AuthUI;
+        "parser"?: {
+    parse: (md: string) => string;
+  };
     }
     interface AloudEditor {
         "firebase": IFirebaseConfig;
+        "parser": {
+    parse: (md: string) => string;
+  };
         /**
           * Markdown to be parsed in-and-out of the editor  Use `.getValue()` to get and update the value
          */
@@ -125,19 +136,23 @@ declare namespace LocalJSX {
     }
     interface AloudEntry {
         "api": IApi;
-        "axios": AxiosInstance;
         "depth": number;
-        "entry": IEntry;
+        "entry": IPost;
         "firebase": IFirebaseConfig;
-        "user": IAuthor;
+        "parser": {
+    parse: (md: string) => string;
+  };
+        "user"?: IAuthor;
     }
     interface AloudSubentry {
         "api": IApi;
-        "axios": AxiosInstance;
-        "entry": IEntry;
+        "entry": IPost;
         "firebase": IFirebaseConfig;
         "parent": IAuthor;
-        "user": IAuthor;
+        "parser": {
+    parse: (md: string) => string;
+  };
+        "user"?: IAuthor;
     }
     interface IntrinsicElements {
         "aloud-comments": AloudComments;

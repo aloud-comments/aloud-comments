@@ -1,10 +1,9 @@
-import { Component, Host, Prop, State, h } from '@stencil/core';
-import { AxiosInstance } from 'axios';
+import { Component, Host, Prop, State, h } from '@stencil/core'
+import { HTMLStencilElement } from '@stencil/core/internal'
 
-import { IAuthor } from '../../utils/faker';
-import { humanizeDurationToNow } from '../../utils/humanize';
-import { makeHtml } from '../../utils/parser';
-import { IApi, IEntry, IFirebaseConfig } from '../aloud-comments/aloud-comments';
+import { IAuthor, IPost } from '../../utils/faker'
+import { humanizeDurationToNow } from '../../utils/humanize'
+import { IApi, IFirebaseConfig } from '../aloud-comments/aloud-comments'
 
 /**
  * @internal
@@ -12,33 +11,40 @@ import { IApi, IEntry, IFirebaseConfig } from '../aloud-comments/aloud-comments'
 @Component({
   tag: 'aloud-subentry',
   styleUrl: 'subentry.scss',
-  scoped: true,
+  scoped: true
 })
 export class AloudEntry {
+  @Prop() user?: IAuthor;
   @Prop() parent!: IAuthor;
-  @Prop() user!: IAuthor;
-  @Prop({
-    mutable: true,
-  })
-  entry!: IEntry;
+  @Prop() entry!: IPost;
   @Prop() api!: IApi;
-  @Prop() axios!: AxiosInstance;
   @Prop() firebase!: IFirebaseConfig;
+  @Prop() parser!: {
+    parse: (md: string) => string;
+  };
 
   @State() isEdit = false;
   @State() isReply = false;
+  @State() children: IPost[] = [];
 
   editor: HTMLAloudEditorElement;
   replier: HTMLAloudEditorElement;
 
-  render() {
+  constructor () {
+    this.api.get({ parentId: this.parent.id }).then(data => {
+      this.children = data
+    })
+  }
+
+  render (): HTMLStencilElement {
     return (
       <Host>
         {this.isEdit ? (
           <aloud-editor
+            parser={this.parser}
             firebase={this.firebase}
             ref={el => {
-              this.editor = el;
+              this.editor = el
             }}
             value={this.entry.markdown}
           />
@@ -47,150 +53,141 @@ export class AloudEntry {
             ref={() => {
               if (this.editor) {
                 this.editor.getValue().then(async v => {
-                  if (this.api) {
-                    return this.axios
-                      .patch(
-                        this.api.update,
-                        {
-                          markdown: v,
-                        },
-                        {
-                          params: {
-                            id: this.entry.id,
-                          },
-                        },
-                      )
+                  if (this.api.update) {
+                    return this.api
+                      .update({
+                        entryId: this.entry.id,
+                        markdown: v
+                      })
                       .then(() => {
                         this.entry = {
                           ...this.entry,
-                          markdown: v,
-                        };
-                      });
+                          markdown: v
+                        }
+                      })
                   }
 
                   this.entry = {
                     ...this.entry,
-                    markdown: v,
-                  };
-                });
+                    markdown: v
+                  }
+                })
               }
             }}
-            innerHTML={makeHtml(`[**@${this.parent.name}**](#) ` + this.entry.markdown)}
+            innerHTML={this.parser.parse(
+              `[**@${this.parent.name}**](#) ` + this.entry.markdown
+            )}
           />
         )}
 
         <small class="dot-separated">
-          {this.entry.author.id === this.user.id
-            ? [
-                ,
-                <span>
-                  <a
-                    role="button"
-                    onClick={() => {
-                      if (this.editor) {
-                        this.editor.getValue().then(async v => {
-                          if (this.api) {
-                            return this.axios
-                              .patch(
-                                this.api.update,
-                                {
-                                  markdown: v,
-                                },
-                                {
-                                  params: {
-                                    id: this.entry.id,
-                                  },
-                                },
-                              )
-                              .then(() => {
-                                this.entry = {
-                                  ...this.entry,
-                                  markdown: v,
-                                };
-                              });
-                          }
-
-                          this.entry = {
-                            ...this.entry,
-                            markdown: v,
-                          };
-                        });
+          {this.entry.author.id === this.user?.id ? (
+            <span>
+              <a
+                role="button"
+                onClick={() => {
+                  if (this.editor) {
+                    this.editor.getValue().then(async v => {
+                      if (this.api.update) {
+                        return this.api
+                          .update({
+                            entryId: this.entry.id,
+                            markdown: v
+                          })
+                          .then(() => {
+                            this.entry = {
+                              ...this.entry,
+                              markdown: v
+                            }
+                          })
                       }
 
-                      this.isEdit = !this.isEdit;
-                    }}
-                  >
-                    {this.isEdit ? 'Save' : 'Edit'}
-                  </a>
-                </span>,
-              ]
-            : [
-                <span>
-                  <a role="button" title="Like">
-                    ❤️
-                  </a>
-                </span>,
-                <span>
-                  <a role="button" title="Dislike">
-                    👎
-                  </a>
-                </span>,
-                <span>
-                  <a role="button" title="Bookmark">
-                    🔖
-                  </a>
-                </span>,
-              ]}
+                      this.entry = {
+                        ...this.entry,
+                        markdown: v
+                      }
+                    })
+                  }
+
+                  this.isEdit = !this.isEdit
+                }}
+              >
+                {this.isEdit ? 'Save' : 'Edit'}
+              </a>
+            </span>
+          ) : (
+            [
+              // eslint-disable-next-line react/jsx-key
+              <span>
+                <a role="button" title="Like">
+                  ❤️
+                </a>
+              </span>,
+              // eslint-disable-next-line react/jsx-key
+              <span>
+                <a role="button" title="Dislike">
+                  👎
+                </a>
+              </span>,
+              // eslint-disable-next-line react/jsx-key
+              <span>
+                <a role="button" title="Bookmark">
+                  🔖
+                </a>
+              </span>
+            ]
+          )}
 
           <span>
             <a
               role="button"
               onClick={() => {
                 if (this.replier) {
-                  this.replier.getValue().then(async v => {
-                    if (!v.trim()) {
-                      return;
-                    }
+                  this.replier
+                    .getValue()
+                    .then(async v => {
+                      if (!v.trim()) {
+                        return
+                      }
 
-                    if (this.api) {
-                      return this.axios
-                        .post(this.api.post, {
-                          author: this.entry.author.id,
-                          markdown: v,
-                          parent: this.entry.id,
-                        })
-                        .then(({ data: { id } }) => {
-                          this.entry = {
-                            ...this.entry,
-                            children: [
+                      if (this.api.post) {
+                        return this.api
+                          .post({
+                            authorId: this.entry.author.id,
+                            parentId: this.entry.id,
+                            markdown: v
+                          })
+                          .then(({ entryId }) => {
+                            this.children = [
                               {
-                                id,
+                                id: entryId,
                                 author: this.entry.author,
                                 markdown: v,
                                 createdAt: +new Date(),
+                                updatedAt: undefined
                               },
-                              ...(this.entry.children || []),
-                            ],
-                          };
-                        });
-                    }
+                              ...this.children
+                            ]
+                          })
+                      }
 
-                    this.entry = {
-                      ...this.entry,
-                      children: [
+                      this.children = [
                         {
-                          id: Math.random(),
+                          id: Math.random().toString(36).substr(2),
                           author: this.entry.author,
                           markdown: v,
                           createdAt: +new Date(),
+                          updatedAt: undefined
                         },
-                        ...(this.entry.children || []),
-                      ],
-                    };
-                  });
+                        ...this.children
+                      ]
+                    })
+                    .finally(() => {
+                      this.replier.value = ''
+                    })
                 }
 
-                this.isReply = !this.isReply;
+                this.isReply = !this.isReply
               }}
             >
               {this.isReply ? 'Post reply' : 'Reply'}
@@ -198,24 +195,36 @@ export class AloudEntry {
           </span>
 
           <span>{humanizeDurationToNow(this.entry.createdAt)}</span>
-          <span class="small-author">by {this.entry.author.id === this.user.id ? 'me' : this.entry.author.name}</span>
+          <span class="small-author">
+            by{' '}
+            {this.entry.author.id === this.user?.id
+              ? 'me'
+              : this.entry.author.name}
+          </span>
         </small>
 
         {this.isReply ? (
           <aloud-editor
             ref={el => {
-              this.replier = el;
+              this.replier = el
             }}
+            parser={this.parser}
             firebase={this.firebase}
           ></aloud-editor>
         ) : null}
 
-        {this.entry.children
-          ? this.entry.children.map(it => (
-              <aloud-subentry user={this.user} parent={this.entry.author} entry={it} api={this.api} axios={this.axios} firebase={this.firebase}></aloud-subentry>
-            ))
-          : null}
+        {this.children.map(it => (
+          <aloud-subentry
+            key={it.id}
+            parser={this.parser}
+            user={this.user}
+            parent={this.entry.author}
+            entry={it}
+            api={this.api}
+            firebase={this.firebase}
+          ></aloud-subentry>
+        ))}
       </Host>
-    );
+    )
   }
 }

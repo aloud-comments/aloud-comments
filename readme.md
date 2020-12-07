@@ -16,7 +16,7 @@ There are three strategies we recommend for using web components built with Sten
 
 ### Script tag
 
-- Put a script tag similar to below, in the head of your `index.html`.
+- Put a script tag similar to below, in the end of body of your `index.html`.
 
 ```html
 <script type="module" src="https://unpkg.com/aloud-comments"></script>

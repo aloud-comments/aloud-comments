@@ -1,10 +1,9 @@
-import { Component, Host, Prop, State, h } from '@stencil/core';
-import { AxiosInstance } from 'axios';
+import { Component, Host, Prop, State, h } from '@stencil/core'
+import { HTMLStencilElement } from '@stencil/core/internal'
 
-import { IAuthor } from '../../utils/faker';
-import { humanizeDurationToNow } from '../../utils/humanize';
-import { makeHtml } from '../../utils/parser';
-import { IApi, IEntry, IFirebaseConfig } from '../aloud-comments/aloud-comments';
+import { IAuthor, IPost } from '../../utils/faker'
+import { humanizeDurationToNow } from '../../utils/humanize'
+import { IApi, IFirebaseConfig } from '../aloud-comments/aloud-comments'
 
 /**
  * @internal
@@ -12,33 +11,48 @@ import { IApi, IEntry, IFirebaseConfig } from '../aloud-comments/aloud-comments'
 @Component({
   tag: 'aloud-entry',
   styleUrl: 'entry.scss',
-  scoped: true,
+  scoped: true
 })
 export class AloudEntry {
-  @Prop() user!: IAuthor;
-  @Prop({
-    mutable: true,
-  })
-  entry!: IEntry;
+  @Prop() user?: IAuthor;
+  @Prop() entry!: IPost;
   @Prop() api!: IApi;
-  @Prop() axios!: AxiosInstance;
   @Prop() firebase!: IFirebaseConfig;
   @Prop() depth!: number;
+  @Prop() parser!: {
+    parse: (md: string) => string;
+  };
 
   @State() isEdit = false;
   @State() isReply = false;
+  @State() maxDepth = 2;
+  @State() children: IPost[] = [];
 
   editor: HTMLAloudEditorElement;
   replier: HTMLAloudEditorElement;
 
-  render() {
-    const MAX_DEPTH = matchMedia('(max-width: 600px)').matches ? 1 : 2
+  constructor () {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const cls = this
+    matchMedia('(max-width: 600px)').onchange = evt => {
+      cls.maxDepth = evt.matches ? 1 : 2
+    }
 
+    this.api.get({ parentId: this.entry.author.id }).then(data => {
+      this.children = data
+    })
+  }
+
+  render (): HTMLStencilElement {
     return (
       <Host class="media">
         <figure class="media-left">
           <p class="image is-48x48">
-            <img src={this.entry.author.image} alt={this.entry.author.name} title={this.entry.author.name} />
+            <img
+              src={this.entry.author.image}
+              alt={this.entry.author.name}
+              title={this.entry.author.name}
+            />
           </p>
         </figure>
         <div class="media-content">
@@ -47,77 +61,73 @@ export class AloudEntry {
             {this.isEdit ? (
               <aloud-editor
                 class="textarea"
+                parser={this.parser}
                 firebase={this.firebase}
                 ref={el => {
-                  this.editor = el;
+                  this.editor = el
                 }}
                 value={this.entry.markdown}
               />
             ) : (
-              <div innerHTML={makeHtml(this.entry.markdown)} />
+              <div innerHTML={this.parser.parse(this.entry.markdown)} />
             )}
             <small class="dot-separated">
-              {this.entry.author.id === this.user.id
-                ? [
-                    ,
-                    <span>
-                      <a
-                        role="button"
-                        onClick={() => {
-                          if (this.editor) {
-                            this.editor.getValue().then(async v => {
-                              if (this.api) {
-                                return this.axios
-                                  .patch(
-                                    this.api.update,
-                                    {
-                                      markdown: v,
-                                    },
-                                    {
-                                      params: {
-                                        id: this.entry.id,
-                                      },
-                                    },
-                                  )
-                                  .then(() => {
-                                    this.entry = {
-                                      ...this.entry,
-                                      markdown: v,
-                                    };
-                                  });
-                              }
-
-                              this.entry = {
-                                ...this.entry,
-                                markdown: v,
-                              };
-                            });
+              {this.entry.author.id === this.user?.id ? (
+                <span>
+                  <a
+                    role="button"
+                    onClick={() => {
+                      if (this.editor) {
+                        this.editor.getValue().then(async v => {
+                          if (this.api.update) {
+                            return this.api
+                              .update({
+                                entryId: this.entry.id,
+                                markdown: v
+                              })
+                              .then(() => {
+                                this.entry = {
+                                  ...this.entry,
+                                  markdown: v
+                                }
+                              })
                           }
 
-                          this.isEdit = !this.isEdit;
-                        }}
-                      >
-                        {this.isEdit ? 'Save' : 'Edit'}
-                      </a>
-                    </span>,
-                  ]
-                : [
-                    <span>
-                      <a role="button" title="Like">
-                        ❤️
-                      </a>
-                    </span>,
-                    <span>
-                      <a role="button" title="Dislike">
-                        👎
-                      </a>
-                    </span>,
-                    <span>
-                      <a role="button" title="Bookmark">
-                        🔖
-                      </a>
-                    </span>,
-                  ]}
+                          this.entry = {
+                            ...this.entry,
+                            markdown: v
+                          }
+                        })
+                      }
+
+                      this.isEdit = !this.isEdit
+                    }}
+                  >
+                    {this.isEdit ? 'Save' : 'Edit'}
+                  </a>
+                </span>
+              ) : (
+                [
+                  // eslint-disable-next-line react/jsx-key
+                  <span>
+                    <a role="button" title="Like">
+                      ❤️
+                    </a>
+                  </span>,
+                  // eslint-disable-next-line react/jsx-key
+                  <span>
+                    <a role="button" title="Dislike">
+                      👎
+                    </a>
+                  </span>,
+                  // eslint-disable-next-line react/jsx-key
+                  <span>
+                    <a role="button" title="Bookmark">
+                      🔖
+                    </a>
+                  </span>
+                ]
+              )}
 
               <span>
                 <a
@@ -126,48 +136,44 @@ export class AloudEntry {
                     if (this.replier) {
                       this.replier.getValue().then(async v => {
                         if (!v.trim()) {
-                          return;
+                          return
                         }
 
-                        if (this.api) {
-                          return this.axios
-                            .post(this.api.post, {
-                              author: this.entry.author.id,
-                              markdown: v,
-                              parent: this.entry.id,
+                        if (this.api.post) {
+                          return this.api
+                            .post({
+                              authorId: this.entry.author.id,
+                              parentId: this.entry.id,
+                              markdown: v
                             })
-                            .then(({ data: { id } }) => {
-                              this.entry = {
-                                ...this.entry,
-                                children: [
-                                  {
-                                    id,
-                                    author: this.entry.author,
-                                    markdown: v,
-                                    createdAt: +new Date(),
-                                  },
-                                  ...(this.entry.children || []),
-                                ],
-                              };
-                            });
+                            .then(({ entryId }) => {
+                              this.children = [
+                                {
+                                  id: entryId,
+                                  author: this.entry.author,
+                                  markdown: v,
+                                  createdAt: +new Date(),
+                                  updatedAt: undefined
+                                },
+                                ...this.children
+                              ]
+                            })
                         }
 
-                        this.entry = {
-                          ...this.entry,
-                          children: [
-                            {
-                              id: Math.random(),
-                              author: this.entry.author,
-                              markdown: v,
-                              createdAt: +new Date(),
-                            },
-                            ...(this.entry.children || []),
-                          ],
-                        };
-                      });
+                        this.children = [
+                          {
+                            id: Math.random().toString(36).substr(2),
+                            author: this.entry.author,
+                            markdown: v,
+                            createdAt: +new Date(),
+                            updatedAt: undefined
+                          },
+                          ...this.children
+                        ]
+                      })
                     }
 
-                    this.isReply = !this.isReply;
+                    this.isReply = !this.isReply
                   }}
                 >
                   {this.isReply ? 'Post reply' : 'Reply'}
@@ -181,24 +187,37 @@ export class AloudEntry {
           {this.isReply ? (
             <aloud-editor
               class="textarea"
+              parser={this.parser}
               ref={el => {
-                this.replier = el;
+                this.replier = el
               }}
               firebase={this.firebase}
             ></aloud-editor>
           ) : null}
 
-          {this.entry.children
-            ? this.entry.children.map(it =>
-                this.depth > MAX_DEPTH ? (
-                  <aloud-subentry user={this.user} parent={this.entry.author} entry={it} api={this.api} axios={this.axios} firebase={this.firebase}></aloud-subentry>
-                ) : (
-                  <aloud-entry user={this.user} entry={it} api={this.api} axios={this.axios} firebase={this.firebase} depth={this.depth + 1}></aloud-entry>
-                ),
-              )
-            : null}
+          {this.children.map(it =>
+            this.depth > this.maxDepth ? (
+              <aloud-subentry
+                parser={this.parser}
+                user={this.user}
+                parent={this.entry.author}
+                entry={it}
+                api={this.api}
+                firebase={this.firebase}
+              ></aloud-subentry>
+            ) : (
+              <aloud-entry
+                parser={this.parser}
+                user={this.user}
+                entry={it}
+                api={this.api}
+                firebase={this.firebase}
+                depth={this.depth + 1}
+              ></aloud-entry>
+            )
+          )}
         </div>
       </Host>
-    );
+    )
   }
 }

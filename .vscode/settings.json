@@ -1,4 +1,5 @@
 {
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "sort-imports.on-save": true
+  "editor.defaultFormatter": "rvest.vs-code-prettier-eslint",
+  "sort-imports.on-save": true,
+  "editor.formatOnSave": true
 }
