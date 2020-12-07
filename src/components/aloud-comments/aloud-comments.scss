@@ -1,18 +1,23 @@
 @import '~bulma/css/bulma.css';
 @import '~firebaseui/dist/firebaseui.css';
 
-* {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-:host {
+main {
   display: block;
-  width: var(--width, 800px);
+  max-width: var(--max-width, 800px);
   padding: 1rem;
+
+  * {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
 }
 
 p {
   margin-bottom: 0.5em;
+}
+
+// Fix Bulma styles
+.content :not(a) {
+  color: unset !important;
 }
 
 .button {

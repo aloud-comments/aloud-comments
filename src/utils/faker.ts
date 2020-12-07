@@ -4,6 +4,7 @@ export interface IAuthor {
   id: string | number;
   name: string;
   image: string;
+  gender?: string;
 }
 
 export interface IPost {
@@ -14,10 +15,13 @@ export interface IPost {
 }
 
 export function randomAuthor(): IAuthor {
+  const gender = Math.random() > 0.5 ? 'female' : 'male'
+
   return {
     id: Math.random(),
-    name: faker.name.findName(),
-    image: `https://joeschmoe.io/api/v1/${Math.random().toString(36).substr(2)}`,
+    name: faker.internet.userName(),
+    image: `https://joeschmoe.io/api/v1/${gender}/${Math.random().toString(36).substr(2)}`,
+    gender
   };
 }
 

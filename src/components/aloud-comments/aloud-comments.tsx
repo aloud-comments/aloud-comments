@@ -1,6 +1,6 @@
-import { Component, Host, Prop, State, h } from '@stencil/core';
+import { Component, Prop, State, h } from '@stencil/core';
 import axios from 'axios';
-import * as firebaseui from 'firebaseui';
+import firebaseui from 'firebaseui';
 import S, { BaseSchema } from 'jsonschema-definer';
 
 import { IAuthor, IPost, randomAuthor, randomPost } from '../../utils/faker';
@@ -11,6 +11,7 @@ const sEntry = (S.shape({
     id: S.anyOf(S.string(), S.number()),
     name: S.string(),
     image: S.string(),
+    gender: S.string().optional()
   }),
   markdown: S.string(),
   createdAt: S.number(),
@@ -174,7 +175,7 @@ export class AloudComments {
 
   render() {
     return (
-      <Host>
+      <main>
         <article class="media mb-4">
           <figure class="media-left">
             <p class="image is-64x64">
@@ -246,7 +247,7 @@ export class AloudComments {
         {this.entries.map(it => (
           <aloud-entry user={this.author} entry={it} api={this.api} axios={this.axios} firebase={this.firebase} depth={1}></aloud-entry>
         ))}
-      </Host>
+      </main>
     );
   }
 }

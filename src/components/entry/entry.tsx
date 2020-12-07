@@ -32,11 +32,13 @@ export class AloudEntry {
   replier: HTMLAloudEditorElement;
 
   render() {
+    const MAX_DEPTH = matchMedia('(max-width: 600px)').matches ? 1 : 2
+
     return (
       <Host class="media">
         <figure class="media-left">
           <p class="image is-48x48">
-            <img src={this.entry.author.image} title={this.entry.author.name} />
+            <img src={this.entry.author.image} alt={this.entry.author.name} title={this.entry.author.name} />
           </p>
         </figure>
         <div class="media-content">
@@ -188,7 +190,7 @@ export class AloudEntry {
 
           {this.entry.children
             ? this.entry.children.map(it =>
-                this.depth > 2 ? (
+                this.depth > MAX_DEPTH ? (
                   <aloud-subentry user={this.user} parent={this.entry.author} entry={it} api={this.api} axios={this.axios} firebase={this.firebase}></aloud-subentry>
                 ) : (
                   <aloud-entry user={this.user} entry={it} api={this.api} axios={this.axios} firebase={this.firebase} depth={this.depth + 1}></aloud-entry>
