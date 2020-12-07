@@ -54,7 +54,10 @@ export class AloudEntry {
   constructor () {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const cls = this
-    matchMedia('(max-width: 600px)').onchange = evt => {
+
+    const mq = matchMedia('(max-width: 600px)')
+    cls.maxDepth = mq.matches ? 1 : 2
+    mq.onchange = evt => {
       cls.maxDepth = evt.matches ? 1 : 2
     }
 
