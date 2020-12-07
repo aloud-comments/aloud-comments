@@ -4,7 +4,12 @@ import { IAuthor, IPost } from '../../utils/faker';
 export interface IApi {
   get: (p: {
     parentId: string | null;
-  }) => Promise<IPost[]>;
+    after?: string;
+    limit?: number;
+  }) => Promise<{
+    result: IPost[];
+    hasMore: boolean;
+  }>;
   post?: (p: {
     authorId: string;
     parentId?: string;
@@ -30,6 +35,8 @@ export declare class AloudComments {
   _firebase: string;
   /**
    * Firebase configuration
+   *
+   * Actually is nullable in Debug mode.
    */
   firebase: IFirebaseConfig;
   /**
@@ -44,6 +51,10 @@ export declare class AloudComments {
     parse: (md: string) => string;
   };
   /**
+   * Number of children to load by default
+   */
+  maxChildrenAllowed: number;
+  /**
    * Whether to generate random entries
    *
    * Requires `faker` to be installed.
@@ -51,7 +62,9 @@ export declare class AloudComments {
   debug: boolean;
   user?: IAuthor;
   entries: IPost[];
+  hasMore: boolean;
   mainEditor: HTMLAloudEditorElement;
   componentWillLoad(): void;
+  doLoad(): void;
   render(): HTMLStencilElement;
 }

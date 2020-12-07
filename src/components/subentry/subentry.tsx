@@ -1,4 +1,13 @@
-import { Component, Host, Prop, State, h } from '@stencil/core'
+import {
+  Component,
+  Event,
+  EventEmitter,
+  Host,
+  Method,
+  Prop,
+  State,
+  h
+} from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 
 import { IAuthor, IPost } from '../../utils/faker'
@@ -13,7 +22,7 @@ import { IApi, IFirebaseConfig } from '../aloud-comments/aloud-comments'
   styleUrl: 'subentry.scss',
   scoped: true
 })
-export class AloudEntry {
+export class AloudSubEntry {
   @Prop() user?: IAuthor;
   @Prop() parent!: IAuthor;
   @Prop() entry!: IPost;
@@ -23,17 +32,56 @@ export class AloudEntry {
     parse: (md: string) => string;
   };
 
+  @Prop() countChangedListener!: (change: {
+    entryId: string;
+    count: number;
+  }) => void;
+
+  @Prop() limit!: number;
+  @Prop() totalSubEntriesLength!: number;
+
+  @Event() childrenCountChanged!: EventEmitter<{
+    entryId: string;
+    count: number;
+  }>;
+
   @State() isEdit = false;
   @State() isReply = false;
   @State() children: IPost[] = [];
+  @State() hasMore = true;
 
   editor: HTMLAloudEditorElement;
   replier: HTMLAloudEditorElement;
 
   constructor () {
-    this.api.get({ parentId: this.parent.id }).then(data => {
-      this.children = data
-    })
+    this.doLoad(false)
+  }
+
+  @Method()
+  async getChildren (): Promise<IPost[]> {
+    return this.children
+  }
+
+  doLoad (forced: boolean): void {
+    if (!forced && !this.limit) {
+      return
+    }
+
+    this.api
+      .get({
+        parentId: this.entry.id,
+        after: this.children[this.children.length - 1]?.id,
+        limit: this.limit
+      })
+      .then(({ result, hasMore }) => {
+        this.children = [...this.children, ...result]
+        this.hasMore = hasMore
+
+        this.childrenCountChanged.emit({
+          entryId: this.entry.id,
+          count: this.children.length
+        })
+      })
   }
 
   render (): HTMLStencilElement {
@@ -222,8 +270,20 @@ export class AloudEntry {
             entry={it}
             api={this.api}
             firebase={this.firebase}
+            limit={this.totalSubEntriesLength > 5 ? 0 : this.limit}
+            totalSubEntriesLength={this.totalSubEntriesLength}
+            countChangedListener={this.countChangedListener}
+            onChildrenCountChanged={evt =>
+              this.countChangedListener(evt.detail)
+            }
           ></aloud-subentry>
         ))}
+
+        {this.hasMore ? (
+          <button class="more" type="button" onClick={() => this.doLoad(true)}>
+            Click for more
+          </button>
+        ) : null}
       </Host>
     )
   }

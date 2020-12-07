@@ -8,5 +8,5 @@ export function humanizeDurationToNow (epoch: number): string {
     return 'Just posted'
   }
 
-  return Duration.of(epoch).toString({ granularity: 2 }) + ' ago'
+  return Duration.of(msec).toString({ maxUnit: 2 }) + ' ago'
 }

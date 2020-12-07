@@ -12,74 +12,107 @@ export class AloudComments {
       get: null
     };
     /**
+     * Number of children to load by default
+     */
+    this.maxChildrenAllowed = 3;
+    /**
      * Whether to generate random entries
      *
      * Requires `faker` to be installed.
      */
     this.debug = false;
     this.entries = [];
+    this.hasMore = true;
   }
   componentWillLoad() {
     if (!this.debug) {
       this.firebase
-        = this.firebase
-          || S.object().ensure(JSON.parse(this._firebase));
+        = this.firebase || S.object().ensure(JSON.parse(this._firebase));
     }
     this.parser = this.parser || new ShowdownParser();
     this.api.get
       = this.api.get
-        || (async ({ parentId }) => {
+        || (() => {
           const authors = {
             collection: [],
             new() {
               const a = randomAuthor();
               this.collection.push(a);
               return a;
-            }
-          };
-          let out = [];
-          const posts = {
-            collection: new Map(),
-            new(id, parent) {
-              const a = randomPost(parent
-                ? new Date(this.collection.get(parent).createdAt)
-                : undefined);
-              this.collection.set(id, Object.assign(Object.assign({}, a), { id }));
-              return a;
+            },
+            random() {
+              return this.collection[Math.floor(Math.random() * this.collection.length)];
             }
           };
           this.user = authors.new();
-          switch (parentId) {
-            case '111':
-              out = [
-                Object.assign(Object.assign({}, posts.new('1111', '111')), { author: this.user })
-              ];
-              break;
-            case '11':
-              out = [
-                Object.assign(Object.assign({}, posts.new('111', '11')), { author: authors.new() })
-              ];
-              break;
-            case '1':
-              out = [
-                Object.assign(Object.assign({}, posts.new('11', '1')), { author: authors.collection[0] }),
-                Object.assign(Object.assign({}, posts.new('12', '1')), { author: authors.new() })
-              ];
-              break;
-            case null:
-              out = [
-                Object.assign(Object.assign({}, posts.new('0')), { author: authors.new() }),
-                Object.assign(Object.assign({}, posts.new('1')), { author: authors.new() }),
-                Object.assign(Object.assign({}, posts.new('2')), { author: authors.collection[4] })
-              ];
-          }
-          return out.sort((i1, i2) => i2.createdAt - i1.createdAt);
-        });
+          Array(4)
+            .fill(null)
+            .map(() => authors.new());
+          const posts = {
+            collection: new Map(),
+            children: new Map(),
+            new(author, id, parent) {
+              parent = parent || null;
+              const a = Object.assign(Object.assign({}, randomPost(parent
+                ? new Date(this.collection.get(parent).createdAt)
+                : undefined)), { id,
+                author });
+              this.collection.set(a.id, a);
+              const children = this.children.get(parent) || [];
+              children.push(a);
+              this.children.set(parent, children);
+              return a;
+            }
+          };
+          const genPost = (parents = [], minItems = 0, alwaysChild = 0) => {
+            if (parents.length > 5) {
+              return;
+            }
+            Array(Math.floor(Math.random() ** 2 * 10) + minItems)
+              .fill(null)
+              .map((_, i) => {
+              posts.new(authors.random(), parents.map(j => j.toString()).join('') + i.toString(), parents.map(j => j.toString()).join(''));
+              Array(alwaysChild)
+                .fill(null)
+                .map(() => {
+                genPost([...parents, i]);
+              });
+              if (Math.random() ** 2 > 0.5) {
+                genPost([...parents, i]);
+              }
+            });
+          };
+          genPost([], 3, 1);
+          return async ({ parentId, after, limit = this.maxChildrenAllowed }) => {
+            let out = (posts.children.get(parentId || null) || []).sort((i1, i2) => i2.createdAt - i1.createdAt);
+            const i = after ? out.map(({ id }) => id).indexOf(after) : -1;
+            if (i !== -1) {
+              out = out.slice(i + 1);
+            }
+            return {
+              hasMore: out.length > limit,
+              result: out.slice(0, limit)
+            };
+          };
+        })();
     /**
      * `null` just stress that it is absolutely no parent, yet can still be switch case'd and comparable
      */
-    this.api.get({ parentId: null }).then(data => {
-      this.entries = data;
+    this.api.get({ parentId: null }).then(({ result, hasMore }) => {
+      this.entries = result;
+      this.hasMore = hasMore;
+    });
+  }
+  doLoad() {
+    var _a;
+    /**
+     * `null` just stress that it is absolutely no parent, yet can still be switch case'd and comparable
+     */
+    this.api
+      .get({ parentId: null, after: (_a = this.entries[this.entries.length - 1]) === null || _a === void 0 ? void 0 : _a.id })
+      .then(({ result, hasMore }) => {
+      this.entries = [...this.entries, ...result];
+      this.hasMore = hasMore;
     });
   }
   render() {
@@ -125,9 +158,7 @@ export class AloudComments {
                       }
                       this.entries = [
                         {
-                          id: Math.random()
-                            .toString(36)
-                            .substr(2),
+                          id: Math.random().toString(36).substr(2),
                           author: this.user,
                           markdown: v,
                           createdAt: +new Date(),
@@ -140,7 +171,8 @@ export class AloudComments {
                       this.mainEditor.value = '';
                     });
                   } }, "Submit")))))),
-      this.entries.map(it => (h("aloud-entry", { key: it.id, parser: this.parser, user: this.user, entry: it, api: this.api, firebase: this.firebase, depth: 1 })))));
+      this.entries.map(it => (h("aloud-entry", { key: it.id, parser: this.parser, user: this.user, entry: it, api: this.api, firebase: this.firebase, depth: 1 }))),
+      this.hasMore ? (h("button", { class: "more", type: "button", onClick: () => this.doLoad() }, "Click for more")) : null));
   }
   static get is() { return "aloud-comments"; }
   static get encapsulation() { return "shadow"; }
@@ -184,7 +216,7 @@ export class AloudComments {
       "optional": false,
       "docs": {
         "tags": [],
-        "text": "Firebase configuration"
+        "text": "Firebase configuration\n\nActually is nullable in Debug mode."
       }
     },
     "firebaseui": {
@@ -241,6 +273,24 @@ export class AloudComments {
         "text": ""
       }
     },
+    "maxChildrenAllowed": {
+      "type": "number",
+      "mutable": false,
+      "complexType": {
+        "original": "number",
+        "resolved": "number",
+        "references": {}
+      },
+      "required": false,
+      "optional": false,
+      "docs": {
+        "tags": [],
+        "text": "Number of children to load by default"
+      },
+      "attribute": "max-children-allowed",
+      "reflect": false,
+      "defaultValue": "3"
+    },
     "debug": {
       "type": "boolean",
       "mutable": false,
@@ -262,6 +312,7 @@ export class AloudComments {
   }; }
   static get states() { return {
     "user": {},
-    "entries": {}
+    "entries": {},
+    "hasMore": {}
   }; }
 }

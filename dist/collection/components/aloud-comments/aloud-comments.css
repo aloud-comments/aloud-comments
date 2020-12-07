@@ -11659,6 +11659,38 @@ p {
   width: 0;
 }
 
+.more {
+  all: unset;
+  position: relative;
+  width: 100%;
+  margin-top: 1em;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #242424;
+  background-color: #ffffd9;
+  cursor: pointer;
+}
+.more::before {
+  z-index: -1;
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  right: 3px;
+  background-color: rgba(255, 255, 217, 0.8);
+  filter: blur(5px);
+  content: "";
+}
+@media (prefers-color-scheme: dark) {
+  .more {
+    color: white;
+    background-color: #85857a;
+  }
+  .more::before {
+    background-color: rgba(133, 133, 122, 0.8);
+  }
+}
+
 small {
   margin-top: 1em;
   display: block;

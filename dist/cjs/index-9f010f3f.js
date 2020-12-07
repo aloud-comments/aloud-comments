@@ -606,6 +606,20 @@ const renderVdom = (hostRef, renderFnResults) => {
     // synchronous patch
     patch(oldVNode, rootVnode);
 };
+const getElement = (ref) => ( getHostRef(ref).$hostElement$ );
+const createEvent = (ref, name, flags) => {
+    const elm = getElement(ref);
+    return {
+        emit: (detail) => {
+            return emitEvent(elm, name, {
+                bubbles: !!(flags & 4 /* Bubbles */),
+                composed: !!(flags & 2 /* Composed */),
+                cancelable: !!(flags & 1 /* Cancellable */),
+                detail,
+            });
+        },
+    };
+};
 const emitEvent = (elm, name, opts) => {
     const ev = plt.ce(name, opts);
     elm.dispatchEvent(ev);
@@ -1160,6 +1174,7 @@ const writeTask = /*@__PURE__*/ queueTask(queueDomWrites, true);
 
 exports.Host = Host;
 exports.bootstrapLazy = bootstrapLazy;
+exports.createEvent = createEvent;
 exports.h = h;
 exports.promiseResolve = promiseResolve;
 exports.registerInstance = registerInstance;

@@ -9,13 +9,32 @@ export class AloudEntry {
     this.isReply = false;
     this.maxDepth = 2;
     this.children = [];
+    this.hasMore = true;
+    this.subEntries = new Map();
+    this.newSubEntriesAllowed = 2;
+    this.subEntryCountListener = (p) => {
+      this.subEntries.set(p.entryId, { count: p.count });
+    };
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const cls = this;
     matchMedia('(max-width: 600px)').onchange = evt => {
       cls.maxDepth = evt.matches ? 1 : 2;
     };
-    this.api.get({ parentId: this.entry.author.id }).then(data => {
-      this.children = data;
+    this.doLoad();
+  }
+  get subEntriesLength() {
+    return Array.from(this.subEntries.values()).reduce((prev, c) => prev + c.count, 0);
+  }
+  doLoad() {
+    var _a;
+    this.api
+      .get({
+      parentId: this.entry.id,
+      after: (_a = this.children[this.children.length - 1]) === null || _a === void 0 ? void 0 : _a.id
+    })
+      .then(({ result, hasMore }) => {
+      this.children = [...this.children, ...result];
+      this.hasMore = hasMore;
     });
   }
   render() {
@@ -105,7 +124,8 @@ export class AloudEntry {
         this.isReply ? (h("aloud-editor", { class: "textarea", parser: this.parser, ref: el => {
             this.replier = el;
           }, firebase: this.firebase })) : null,
-        this.children.map(it => this.depth > this.maxDepth ? (h("aloud-subentry", { parser: this.parser, user: this.user, parent: this.entry.author, entry: it, api: this.api, firebase: this.firebase })) : (h("aloud-entry", { parser: this.parser, user: this.user, entry: it, api: this.api, firebase: this.firebase, depth: this.depth + 1 }))))));
+        this.children.map(it => this.depth > this.maxDepth ? (h("aloud-subentry", { parser: this.parser, user: this.user, parent: this.entry.author, entry: it, api: this.api, firebase: this.firebase, limit: this.newSubEntriesAllowed, totalSubEntriesLength: this.subEntriesLength, countChangedListener: this.subEntryCountListener, onChildrenCountChanged: evt => this.subEntryCountListener(evt.detail) })) : (h("aloud-entry", { parser: this.parser, user: this.user, entry: it, api: this.api, firebase: this.firebase, depth: this.depth + 1 }))),
+        this.hasMore ? (h("button", { class: "more", type: "button", onClick: () => this.doLoad() }, "Click for more")) : null)));
   }
   static get is() { return "aloud-entry"; }
   static get encapsulation() { return "scoped"; }
@@ -233,6 +253,8 @@ export class AloudEntry {
     "isEdit": {},
     "isReply": {},
     "maxDepth": {},
-    "children": {}
+    "children": {},
+    "hasMore": {},
+    "subEntries": {}
   }; }
 }

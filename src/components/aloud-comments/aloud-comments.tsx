@@ -3,16 +3,18 @@ import { HTMLStencilElement } from '@stencil/core/internal'
 import firebaseui from 'firebaseui'
 import S from 'jsonschema-definer'
 
-import {
-  IAuthor,
-  IPost,
-  randomAuthor,
-  randomPost
-} from '../../utils/faker'
+import { IAuthor, IPost, randomAuthor, randomPost } from '../../utils/faker'
 import { ShowdownParser } from '../../utils/parser'
 
 export interface IApi {
-  get: (p: { parentId: string | null }) => Promise<IPost[]>;
+  get: (p: {
+    parentId: string | null;
+    after?: string;
+    limit?: number;
+  }) => Promise<{
+    result: IPost[];
+    hasMore: boolean;
+  }>;
   post?: (p: {
     authorId: string;
     parentId?: string;
@@ -20,10 +22,7 @@ export interface IApi {
   }) => Promise<{
     entryId: string;
   }>;
-  update?: (p: {
-    entryId: string;
-    markdown: string;
-  }) => Promise<void>;
+  update?: (p: { entryId: string; markdown: string }) => Promise<void>;
   delete?: (p?: unknown) => Promise<unknown>;
 }
 
@@ -49,6 +48,8 @@ export class AloudComments {
 
   /**
    * Firebase configuration
+   *
+   * Actually is nullable in Debug mode.
    */
   @Prop({
     mutable: true
@@ -85,6 +86,11 @@ export class AloudComments {
   };
 
   /**
+   * Number of children to load by default
+   */
+  @Prop() maxChildrenAllowed = 3;
+
+  /**
    * Whether to generate random entries
    *
    * Requires `faker` to be installed.
@@ -93,109 +99,135 @@ export class AloudComments {
 
   @State() user?: IAuthor;
   @State() entries: IPost[] = [];
+  @State() hasMore = true;
 
   mainEditor: HTMLAloudEditorElement;
 
   componentWillLoad (): void {
     if (!this.debug) {
       this.firebase
-        = this.firebase
-        || S.object().ensure(JSON.parse(this._firebase))
+        = this.firebase || S.object().ensure(JSON.parse(this._firebase))
     }
 
     this.parser = this.parser || new ShowdownParser()
 
     this.api.get
       = this.api.get
-      || (async ({ parentId }) => {
+      || ((): IApi['get'] => {
         const authors = {
           collection: [] as IAuthor[],
           new () {
             const a = randomAuthor()
             this.collection.push(a)
             return a
-          }
-        }
-
-        let out: IPost[] = []
-
-        const posts = {
-          collection: new Map<string, IPost>(),
-          new (id: string, parent?: string) {
-            const a = randomPost(
-              parent
-                ? new Date(
-                    this.collection.get(parent).createdAt
-                  )
-                : undefined
-            )
-            this.collection.set(id, {
-              ...a,
-              id
-            })
-            return a
+          },
+          random () {
+            return this.collection[
+              Math.floor(Math.random() * this.collection.length)
+            ]
           }
         }
 
         this.user = authors.new()
 
-        switch (parentId) {
-          case '111':
-            out = [
-              {
-                ...posts.new('1111', '111'),
-                author: this.user
-              }
-            ]
-            break
-          case '11':
-            out = [
-              {
-                ...posts.new('111', '11'),
-                author: authors.new()
-              }
-            ]
-            break
-          case '1':
-            out = [
-              {
-                ...posts.new('11', '1'),
-                author: authors.collection[0]
-              },
-              {
-                ...posts.new('12', '1'),
-                author: authors.new()
-              }
-            ]
-            break
-          case null:
-            out = [
-              {
-                ...posts.new('0'),
-                author: authors.new()
-              },
-              {
-                ...posts.new('1'),
-                author: authors.new()
-              },
-              {
-                ...posts.new('2'),
-                author: authors.collection[4]
-              }
-            ]
+        Array(4)
+          .fill(null)
+          .map(() => authors.new())
+
+        const posts = {
+          collection: new Map<string, IPost>(),
+          children: new Map<string | null, IPost[]>(),
+          new (author: IAuthor, id: string, parent?: string) {
+            parent = parent || null
+
+            const a: IPost = {
+              ...randomPost(
+                parent
+                  ? new Date(this.collection.get(parent).createdAt)
+                  : undefined
+              ),
+              id,
+              author
+            }
+
+            this.collection.set(a.id, a)
+
+            const children = this.children.get(parent) || []
+            children.push(a)
+            this.children.set(parent, children)
+
+            return a
+          }
         }
 
-        return out.sort(
-          (i1, i2) => i2.createdAt - i1.createdAt
-        )
-      })
+        const genPost = (
+          parents: number[] = [],
+          minItems = 0,
+          alwaysChild = 0
+        ) => {
+          if (parents.length > 5) {
+            return
+          }
+
+          Array(Math.floor(Math.random() ** 2 * 10) + minItems)
+            .fill(null)
+            .map((_, i) => {
+              posts.new(
+                authors.random(),
+                parents.map(j => j.toString()).join('') + i.toString(),
+                parents.map(j => j.toString()).join('')
+              )
+
+              Array(alwaysChild)
+                .fill(null)
+                .map(() => {
+                  genPost([...parents, i])
+                })
+
+              if (Math.random() ** 2 > 0.5) {
+                genPost([...parents, i])
+              }
+            })
+        }
+
+        genPost([], 3, 1)
+
+        return async ({ parentId, after, limit = this.maxChildrenAllowed }) => {
+          let out = (posts.children.get(parentId || null) || []).sort(
+            (i1, i2) => i2.createdAt - i1.createdAt
+          )
+
+          const i = after ? out.map(({ id }) => id).indexOf(after) : -1
+          if (i !== -1) {
+            out = out.slice(i + 1)
+          }
+
+          return {
+            hasMore: out.length > limit,
+            result: out.slice(0, limit)
+          }
+        }
+      })()
 
     /**
      * `null` just stress that it is absolutely no parent, yet can still be switch case'd and comparable
      */
-    this.api.get({ parentId: null }).then(data => {
-      this.entries = data
+    this.api.get({ parentId: null }).then(({ result, hasMore }) => {
+      this.entries = result
+      this.hasMore = hasMore
     })
+  }
+
+  doLoad (): void {
+    /**
+     * `null` just stress that it is absolutely no parent, yet can still be switch case'd and comparable
+     */
+    this.api
+      .get({ parentId: null, after: this.entries[this.entries.length - 1]?.id })
+      .then(({ result, hasMore }) => {
+        this.entries = [...this.entries, ...result]
+        this.hasMore = hasMore
+      })
   }
 
   render (): HTMLStencilElement {
@@ -265,9 +297,7 @@ export class AloudComments {
 
                           this.entries = [
                             {
-                              id: Math.random()
-                                .toString(36)
-                                .substr(2),
+                              id: Math.random().toString(36).substr(2),
                               author: this.user,
                               markdown: v,
                               createdAt: +new Date(),
@@ -300,6 +330,12 @@ export class AloudComments {
             depth={1}
           ></aloud-entry>
         ))}
+
+        {this.hasMore ? (
+          <button class="more" type="button" onClick={() => this.doLoad()}>
+            Click for more
+          </button>
+        ) : null}
       </main>
     )
   }

@@ -584,6 +584,20 @@ const renderVdom = (hostRef, renderFnResults) => {
     // synchronous patch
     patch(oldVNode, rootVnode);
 };
+const getElement = (ref) => ( getHostRef(ref).$hostElement$ );
+const createEvent = (ref, name, flags) => {
+    const elm = getElement(ref);
+    return {
+        emit: (detail) => {
+            return emitEvent(elm, name, {
+                bubbles: !!(flags & 4 /* Bubbles */),
+                composed: !!(flags & 2 /* Composed */),
+                cancelable: !!(flags & 1 /* Cancellable */),
+                detail,
+            });
+        },
+    };
+};
 const emitEvent = (elm, name, opts) => {
     const ev = plt.ce(name, opts);
     elm.dispatchEvent(ev);
@@ -1136,4 +1150,4 @@ const flush = () => {
 const nextTick = /*@__PURE__*/ (cb) => promiseResolve().then(cb);
 const writeTask = /*@__PURE__*/ queueTask(queueDomWrites, true);
 
-export { Host as H, bootstrapLazy as b, h, promiseResolve as p, registerInstance as r };
+export { Host as H, bootstrapLazy as b, createEvent as c, h, promiseResolve as p, registerInstance as r };

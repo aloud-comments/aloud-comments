@@ -27,9 +27,29 @@ export class AloudEntry {
   @State() isReply = false;
   @State() maxDepth = 2;
   @State() children: IPost[] = [];
+  @State() hasMore = true;
+  @State() subEntries = new Map<
+    string,
+    {
+      count: number;
+    }
+  >();
+
+  readonly newSubEntriesAllowed = 2;
+
+  subEntryCountListener = (p: { entryId: string; count: number }): void => {
+    this.subEntries.set(p.entryId, { count: p.count })
+  };
 
   editor: HTMLAloudEditorElement;
   replier: HTMLAloudEditorElement;
+
+  get subEntriesLength (): number {
+    return Array.from(this.subEntries.values()).reduce(
+      (prev, c) => prev + c.count,
+      0
+    )
+  }
 
   constructor () {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -38,9 +58,19 @@ export class AloudEntry {
       cls.maxDepth = evt.matches ? 1 : 2
     }
 
-    this.api.get({ parentId: this.entry.author.id }).then(data => {
-      this.children = data
-    })
+    this.doLoad()
+  }
+
+  doLoad (): void {
+    this.api
+      .get({
+        parentId: this.entry.id,
+        after: this.children[this.children.length - 1]?.id
+      })
+      .then(({ result, hasMore }) => {
+        this.children = [...this.children, ...result]
+        this.hasMore = hasMore
+      })
   }
 
   render (): HTMLStencilElement {
@@ -204,6 +234,12 @@ export class AloudEntry {
                 entry={it}
                 api={this.api}
                 firebase={this.firebase}
+                limit={this.newSubEntriesAllowed}
+                totalSubEntriesLength={this.subEntriesLength}
+                countChangedListener={this.subEntryCountListener}
+                onChildrenCountChanged={evt =>
+                  this.subEntryCountListener(evt.detail)
+                }
               ></aloud-subentry>
             ) : (
               <aloud-entry
@@ -216,6 +252,12 @@ export class AloudEntry {
               ></aloud-entry>
             )
           )}
+
+          {this.hasMore ? (
+            <button class="more" type="button" onClick={() => this.doLoad()}>
+              Click for more
+            </button>
+          ) : null}
         </div>
       </Host>
     )

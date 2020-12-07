@@ -17,8 +17,19 @@ export declare class AloudEntry {
   isReply: boolean;
   maxDepth: number;
   children: IPost[];
+  hasMore: boolean;
+  subEntries: Map<string, {
+    count: number;
+  }>;
+  readonly newSubEntriesAllowed = 2;
+  subEntryCountListener: (p: {
+    entryId: string;
+    count: number;
+  }) => void;
   editor: HTMLAloudEditorElement;
   replier: HTMLAloudEditorElement;
+  get subEntriesLength(): number;
   constructor();
+  doLoad(): void;
   render(): HTMLStencilElement;
 }

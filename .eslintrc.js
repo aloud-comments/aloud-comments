@@ -24,11 +24,9 @@ module.exports = {
     }
   },
   rules: {
-    'react/no-unknown-property': [
-      'error',
-      { ignore: ['class', 'innerHTML'] }
-    ],
+    'react/no-unknown-property': ['error', { ignore: ['class', 'innerHTML'] }],
+    'operator-linebreak': ['error', 'before'],
     'multiline-ternary': 0,
-    'operator-linebreak': ['error', 'before']
+    'array-callback-return': 0
   }
 }

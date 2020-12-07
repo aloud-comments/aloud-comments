@@ -5,5 +5,5 @@ export function humanizeDurationToNow(epoch) {
   if (msec < 5000) {
     return 'Just posted';
   }
-  return Duration.of(epoch).toString({ granularity: 2 }) + ' ago';
+  return Duration.of(msec).toString({ maxUnit: 2 }) + ' ago';
 }

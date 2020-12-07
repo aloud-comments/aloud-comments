@@ -1,15 +1,37 @@
-import { Component, Host, Prop, State, h } from '@stencil/core';
+import { Component, Event, Host, Method, Prop, State, h } from '@stencil/core';
 import { humanizeDurationToNow } from '../../utils/humanize';
 /**
  * @internal
  */
-export class AloudEntry {
+export class AloudSubEntry {
   constructor() {
     this.isEdit = false;
     this.isReply = false;
     this.children = [];
-    this.api.get({ parentId: this.parent.id }).then(data => {
-      this.children = data;
+    this.hasMore = true;
+    this.doLoad(false);
+  }
+  async getChildren() {
+    return this.children;
+  }
+  doLoad(forced) {
+    var _a;
+    if (!forced && !this.limit) {
+      return;
+    }
+    this.api
+      .get({
+      parentId: this.entry.id,
+      after: (_a = this.children[this.children.length - 1]) === null || _a === void 0 ? void 0 : _a.id,
+      limit: this.limit
+    })
+      .then(({ result, hasMore }) => {
+      this.children = [...this.children, ...result];
+      this.hasMore = hasMore;
+      this.childrenCountChanged.emit({
+        entryId: this.entry.id,
+        count: this.children.length
+      });
     });
   }
   render() {
@@ -120,7 +142,8 @@ export class AloudEntry {
       this.isReply ? (h("aloud-editor", { ref: el => {
           this.replier = el;
         }, parser: this.parser, firebase: this.firebase })) : null,
-      this.children.map(it => (h("aloud-subentry", { key: it.id, parser: this.parser, user: this.user, parent: this.entry.author, entry: it, api: this.api, firebase: this.firebase })))));
+      this.children.map(it => (h("aloud-subentry", { key: it.id, parser: this.parser, user: this.user, parent: this.entry.author, entry: it, api: this.api, firebase: this.firebase, limit: this.totalSubEntriesLength > 5 ? 0 : this.limit, totalSubEntriesLength: this.totalSubEntriesLength, countChangedListener: this.countChangedListener, onChildrenCountChanged: evt => this.countChangedListener(evt.detail) }))),
+      this.hasMore ? (h("button", { class: "more", type: "button", onClick: () => this.doLoad(true) }, "Click for more")) : null));
   }
   static get is() { return "aloud-subentry"; }
   static get encapsulation() { return "scoped"; }
@@ -245,11 +268,99 @@ export class AloudEntry {
         "tags": [],
         "text": ""
       }
+    },
+    "countChangedListener": {
+      "type": "unknown",
+      "mutable": false,
+      "complexType": {
+        "original": "(change: {\n    entryId: string;\n    count: number;\n  }) => void",
+        "resolved": "(change: { entryId: string; count: number; }) => void",
+        "references": {}
+      },
+      "required": true,
+      "optional": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      }
+    },
+    "limit": {
+      "type": "number",
+      "mutable": false,
+      "complexType": {
+        "original": "number",
+        "resolved": "number",
+        "references": {}
+      },
+      "required": true,
+      "optional": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "attribute": "limit",
+      "reflect": false
+    },
+    "totalSubEntriesLength": {
+      "type": "number",
+      "mutable": false,
+      "complexType": {
+        "original": "number",
+        "resolved": "number",
+        "references": {}
+      },
+      "required": true,
+      "optional": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "attribute": "total-sub-entries-length",
+      "reflect": false
     }
   }; }
   static get states() { return {
     "isEdit": {},
     "isReply": {},
-    "children": {}
+    "children": {},
+    "hasMore": {}
+  }; }
+  static get events() { return [{
+      "method": "childrenCountChanged",
+      "name": "childrenCountChanged",
+      "bubbles": true,
+      "cancelable": true,
+      "composed": true,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "complexType": {
+        "original": "{\n    entryId: string;\n    count: number;\n  }",
+        "resolved": "{ entryId: string; count: number; }",
+        "references": {}
+      }
+    }]; }
+  static get methods() { return {
+    "getChildren": {
+      "complexType": {
+        "signature": "() => Promise<IPost[]>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global"
+          },
+          "IPost": {
+            "location": "import",
+            "path": "../../utils/faker"
+          }
+        },
+        "return": "Promise<{ id: string; author: { id: string; name: string; image: string; gender: string; }; markdown: string; createdAt: number; updatedAt: number; }[]>"
+      },
+      "docs": {
+        "text": "",
+        "tags": []
+      }
+    }
   }; }
 }

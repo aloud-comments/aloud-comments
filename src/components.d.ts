@@ -23,13 +23,17 @@ export namespace Components {
          */
         "debug": boolean;
         /**
-          * Firebase configuration
+          * Firebase configuration  Actually is nullable in Debug mode.
          */
         "firebase": IFirebaseConfig;
         /**
           * Custom `firebaseui.auth.AuthUI` object
          */
         "firebaseui"?: firebaseui.auth.AuthUI;
+        /**
+          * Number of children to load by default
+         */
+        "maxChildrenAllowed": number;
         "parser": {
     parse: (md: string) => string;
   };
@@ -57,12 +61,19 @@ export namespace Components {
     }
     interface AloudSubentry {
         "api": IApi;
+        "countChangedListener": (change: {
+    entryId: string;
+    count: number;
+  }) => void;
         "entry": IPost;
         "firebase": IFirebaseConfig;
+        "getChildren": () => Promise<IPost[]>;
+        "limit": number;
         "parent": IAuthor;
         "parser": {
     parse: (md: string) => string;
   };
+        "totalSubEntriesLength": number;
         "user"?: IAuthor;
     }
 }
@@ -113,13 +124,17 @@ declare namespace LocalJSX {
          */
         "debug"?: boolean;
         /**
-          * Firebase configuration
+          * Firebase configuration  Actually is nullable in Debug mode.
          */
         "firebase": IFirebaseConfig;
         /**
           * Custom `firebaseui.auth.AuthUI` object
          */
         "firebaseui"?: firebaseui.auth.AuthUI;
+        /**
+          * Number of children to load by default
+         */
+        "maxChildrenAllowed"?: number;
         "parser"?: {
     parse: (md: string) => string;
   };
@@ -146,12 +161,22 @@ declare namespace LocalJSX {
     }
     interface AloudSubentry {
         "api": IApi;
+        "countChangedListener": (change: {
+    entryId: string;
+    count: number;
+  }) => void;
         "entry": IPost;
         "firebase": IFirebaseConfig;
+        "limit": number;
+        "onChildrenCountChanged"?: (event: CustomEvent<{
+    entryId: string;
+    count: number;
+  }>) => void;
         "parent": IAuthor;
         "parser": {
     parse: (md: string) => string;
   };
+        "totalSubEntriesLength": number;
         "user"?: IAuthor;
     }
     interface IntrinsicElements {
