@@ -10,7 +10,7 @@ import {
 } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 
-import { IAuthor, IPost } from '../../utils/faker'
+import { IAuthor, IPost, IReactionType, ReactionTypes } from '../../types'
 import { humanizeDurationToNow } from '../../utils/humanize'
 import { IApi, IFirebaseConfig } from '../aloud-comments/aloud-comments'
 
@@ -25,7 +25,11 @@ import { IApi, IFirebaseConfig } from '../aloud-comments/aloud-comments'
 export class AloudSubEntry {
   @Prop() user?: IAuthor;
   @Prop() parent!: IAuthor;
-  @Prop() entry!: IPost;
+  @Prop({
+    mutable: true
+  })
+  entry!: IPost;
+
   @Prop() api!: IApi;
   @Prop() firebase!: IFirebaseConfig;
   @Prop() parser!: {
@@ -39,6 +43,7 @@ export class AloudSubEntry {
 
   @Prop() limit!: number;
   @Prop() totalSubEntriesLength!: number;
+  @Prop() isSmallScreen!: boolean;
 
   @Event() childrenCountChanged!: EventEmitter<{
     entryId: string;
@@ -47,6 +52,7 @@ export class AloudSubEntry {
 
   @State() isEdit = false;
   @State() isReply = false;
+  @State() isExpanded = false;
   @State() children: IPost[] = [];
   @State() hasMore = true;
 
@@ -84,6 +90,56 @@ export class AloudSubEntry {
       })
   }
 
+  getReaction (r: IReactionType): Set<string> {
+    return (this.entry.reaction || {})[r] || new Set()
+  }
+
+  async setReaction (r: IReactionType): Promise<void> {
+    return (async () => {
+      this.entry.reaction = this.entry.reaction || {
+        like: new Set(),
+        dislike: new Set(),
+        bookmark: new Set()
+      }
+
+      if (this.api.reaction) {
+        return this.api
+          .reaction({
+            entryId: this.entry.id,
+            userId: this.user.id,
+            reaction: r
+          })
+          .then(({ changes }) => {
+            for (const k of ReactionTypes) {
+              const c = changes[k] || 0
+              if (c > 0) {
+                this.entry.reaction.dislike.add(this.user.id)
+              } else if (c < 0) {
+                this.entry.reaction.dislike.delete(this.user.id)
+              }
+            }
+          })
+      }
+
+      if (r === 'like') {
+        this.entry.reaction.dislike.delete(this.user.id)
+      } else if (r === 'dislike') {
+        this.entry.reaction.like.delete(this.user.id)
+      }
+
+      if (this.entry.reaction[r].has(this.user.id)) {
+        this.entry.reaction[r].delete(this.user.id)
+      } else {
+        this.entry.reaction[r].add(this.user.id)
+      }
+    })().finally(() => {
+      this.entry = {
+        ...this.entry,
+        reaction: this.entry.reaction
+      }
+    })
+  }
+
   render (): HTMLStencilElement {
     return (
       <Host>
@@ -98,33 +154,32 @@ export class AloudSubEntry {
           />
         ) : (
           <small
-            ref={() => {
-              if (this.editor) {
-                this.editor.getValue().then(async v => {
-                  if (this.api.update) {
-                    return this.api
-                      .update({
-                        entryId: this.entry.id,
-                        markdown: v
-                      })
-                      .then(() => {
-                        this.entry = {
-                          ...this.entry,
-                          markdown: v
-                        }
-                      })
-                  }
-
-                  this.entry = {
-                    ...this.entry,
-                    markdown: v
-                  }
-                })
-              }
+            role="button"
+            onClick={() => {
+              this.isExpanded = true
             }}
-            innerHTML={this.parser.parse(
-              `[**@${this.parent.name}**](#) ` + this.entry.markdown
-            )}
+            innerHTML={(() => {
+              const markdown
+                = `[**@${this.parent.name}**](#) ` + this.entry.markdown
+
+              if (this.isExpanded || !this.isSmallScreen) {
+                return this.parser.parse(markdown)
+              }
+
+              const body = document.createElement('body')
+              body.innerHTML = this.parser.parse(
+                this.entry.markdown.slice(0, 80)
+              )
+
+              const { lastElementChild } = body.firstElementChild || {}
+              if (lastElementChild instanceof HTMLParagraphElement) {
+                lastElementChild.innerHTML += '...'
+              } else {
+                body.innerHTML += '...'
+              }
+
+              return body.innerHTML
+            })()}
           />
         )}
 
@@ -163,28 +218,53 @@ export class AloudSubEntry {
                 {this.isEdit ? 'Save' : 'Edit'}
               </a>
             </span>
-          ) : (
+          ) : this.user ? (
             [
               // eslint-disable-next-line react/jsx-key
               <span>
-                <a role="button" title="Like">
-                  ❤️
+                <a
+                  role="button"
+                  title="Like"
+                  class={
+                    this.getReaction('like').has(this.user.id) ? 'active' : ''
+                  }
+                  onClick={() => this.setReaction('like')}
+                >
+                  ❤️ {this.getReaction('like').size || ''}
                 </a>
               </span>,
               // eslint-disable-next-line react/jsx-key
               <span>
-                <a role="button" title="Dislike">
-                  👎
+                <a
+                  role="button"
+                  title="Dislike"
+                  class={
+                    this.getReaction('dislike').has(this.user.id)
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => this.setReaction('dislike')}
+                >
+                  👎 {this.getReaction('dislike').size || ''}
                 </a>
               </span>,
               // eslint-disable-next-line react/jsx-key
               <span>
-                <a role="button" title="Bookmark">
-                  🔖
+                <a
+                  role="button"
+                  title="Bookmark"
+                  class={
+                    this.getReaction('bookmark').has(this.user.id)
+                      ? 'active'
+                      : ''
+                  }
+                  onClick={() => this.setReaction('bookmark')}
+                >
+                  🔖 {this.getReaction('bookmark').size || ''}
                 </a>
               </span>
             ]
-          )}
+          ) : null}
 
           <span>
             <a
@@ -211,8 +291,7 @@ export class AloudSubEntry {
                                 id: entryId,
                                 author: this.entry.author,
                                 markdown: v,
-                                createdAt: +new Date(),
-                                updatedAt: undefined
+                                createdAt: new Date()
                               },
                               ...this.children
                             ]
@@ -224,8 +303,7 @@ export class AloudSubEntry {
                           id: Math.random().toString(36).substr(2),
                           author: this.entry.author,
                           markdown: v,
-                          createdAt: +new Date(),
-                          updatedAt: undefined
+                          createdAt: new Date()
                         },
                         ...this.children
                       ]
@@ -245,9 +323,8 @@ export class AloudSubEntry {
           <span>{humanizeDurationToNow(this.entry.createdAt)}</span>
           <span class="small-author">
             by{' '}
-            {this.entry.author.id === this.user?.id
-              ? 'me'
-              : this.entry.author.name}
+            {this.entry.author.name
+              + (this.entry.author.id === this.user?.id ? ' (me)' : '')}
           </span>
         </small>
 
@@ -271,6 +348,7 @@ export class AloudSubEntry {
             api={this.api}
             firebase={this.firebase}
             limit={this.totalSubEntriesLength > 5 ? 0 : this.limit}
+            isSmallScreen={this.isSmallScreen}
             totalSubEntriesLength={this.totalSubEntriesLength}
             countChangedListener={this.countChangedListener}
             onChildrenCountChanged={evt =>
@@ -281,7 +359,7 @@ export class AloudSubEntry {
 
         {this.hasMore ? (
           <button class="more" type="button" onClick={() => this.doLoad(true)}>
-            Click for more
+            Click for more (to @{this.parent.name})
           </button>
         ) : null}
       </Host>

@@ -1,9 +1,9 @@
 import { Component, Prop, State, h } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 import firebaseui from 'firebaseui'
-import S from 'jsonschema-definer'
 
-import { IAuthor, IPost, randomAuthor, randomPost } from '../../utils/faker'
+import { IAuthor, IPost, IReactionType } from '../../types'
+import { randomAuthor, randomPost } from '../../utils/faker'
 import { ShowdownParser } from '../../utils/parser'
 
 export interface IApi {
@@ -23,7 +23,20 @@ export interface IApi {
     entryId: string;
   }>;
   update?: (p: { entryId: string; markdown: string }) => Promise<void>;
-  delete?: (p?: unknown) => Promise<unknown>;
+  reaction?: (p: {
+    entryId: string;
+    userId: string;
+    reaction: IReactionType;
+  }) => Promise<{
+    changes: {
+      [t in IReactionType]?: number;
+    };
+  }>;
+  delete?: (p: {
+    entryId: string;
+  }) => Promise<{
+    status: 'deleted' | 'suppressed';
+  }>;
 }
 
 export type IFirebaseConfig = {
@@ -100,13 +113,28 @@ export class AloudComments {
   @State() user?: IAuthor;
   @State() entries: IPost[] = [];
   @State() hasMore = true;
+  @State() isSmallScreen = false;
 
   mainEditor: HTMLAloudEditorElement;
 
   componentWillLoad (): void {
+    const mq = matchMedia('(max-width: 600px)')
+
+    if (
+      mq.matches
+      || /(Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini)/i.test(
+        navigator.userAgent
+      )
+    ) {
+      this.isSmallScreen = true
+    }
+
+    mq.onchange = evt => {
+      this.isSmallScreen = evt.matches
+    }
+
     if (!this.debug) {
-      this.firebase
-        = this.firebase || S.object().ensure(JSON.parse(this._firebase))
+      this.firebase = this.firebase || JSON.parse(this._firebase)
     }
 
     this.parser = this.parser || new ShowdownParser()
@@ -137,7 +165,7 @@ export class AloudComments {
         const posts = {
           collection: new Map<string, IPost>(),
           children: new Map<string | null, IPost[]>(),
-          new (author: IAuthor, id: string, parent?: string) {
+          new (author: IAuthor, id: string, parent?: string): IPost {
             parent = parent || null
 
             const a: IPost = {
@@ -162,40 +190,60 @@ export class AloudComments {
 
         const genPost = (
           parents: number[] = [],
-          minItems = 0,
-          alwaysChild = 0
-        ) => {
+          {
+            minItems = 1
+          }: {
+            minItems?: number;
+          } = {}
+        ): IPost[] => {
           if (parents.length > 5) {
-            return
+            return []
           }
 
-          Array(Math.floor(Math.random() ** 2 * 10) + minItems)
+          let hasChildren = false
+
+          const out = Array(Math.floor(Math.random() ** 2 * 9) + minItems)
             .fill(null)
             .map((_, i) => {
+              const ps = [
+                posts.new(
+                  authors.random(),
+                  parents.map(j => j.toString()).join('') + i.toString(),
+                  parents.map(j => j.toString()).join('')
+                )
+              ]
+
+              if (Math.random() ** 2 > 0.5) {
+                hasChildren = true
+                return [...ps, ...genPost([...parents, i])]
+              }
+
+              return ps
+            })
+            .reduce((prev, c) => [...prev, ...c], [])
+
+          if (parents.length < 5 && !hasChildren) {
+            const i = 9
+            return [
+              ...out,
               posts.new(
                 authors.random(),
                 parents.map(j => j.toString()).join('') + i.toString(),
                 parents.map(j => j.toString()).join('')
-              )
+              ),
+              ...genPost([...parents, i])
+            ]
+          }
 
-              Array(alwaysChild)
-                .fill(null)
-                .map(() => {
-                  genPost([...parents, i])
-                })
-
-              if (Math.random() ** 2 > 0.5) {
-                genPost([...parents, i])
-              }
-            })
+          return out
         }
 
-        genPost([], 3, 1)
+        genPost([], { minItems: 3 })
 
         return async ({ parentId, after, limit = this.maxChildrenAllowed }) => {
-          let out = (posts.children.get(parentId || null) || []).sort(
-            (i1, i2) => i2.createdAt - i1.createdAt
-          )
+          let out = (
+            posts.children.get(parentId || null) || []
+          ).sort((i1, i2) => (i1.createdAt < i2.createdAt ? -1 : 1))
 
           const i = after ? out.map(({ id }) => id).indexOf(after) : -1
           if (i !== -1) {
@@ -228,6 +276,28 @@ export class AloudComments {
         this.entries = [...this.entries, ...result]
         this.hasMore = hasMore
       })
+  }
+
+  async doDelete (entryId: string): Promise<void> {
+    if (this.api.delete) {
+      const { status } = await this.api.delete({ entryId })
+      if (status === 'deleted') {
+        this.entries = this.entries.filter(it => it.id !== entryId)
+      } else {
+        const i = this.entries.map(it => it.id).indexOf(entryId)
+        if (this.entries[i]) {
+          this.entries = [
+            ...this.entries.slice(0, i),
+            {
+              ...this.entries[i],
+              markdown: '*Deleted*',
+              isDeleted: true
+            },
+            ...this.entries.slice(i + 1)
+          ]
+        }
+      }
+    }
   }
 
   render (): HTMLStencilElement {
@@ -287,8 +357,8 @@ export class AloudComments {
                                     id: entryId,
                                     author: this.user,
                                     markdown: v,
-                                    createdAt: +new Date(),
-                                    updatedAt: undefined
+                                    isDeleted: false,
+                                    createdAt: new Date()
                                   },
                                   ...this.entries
                                 ]
@@ -300,8 +370,8 @@ export class AloudComments {
                               id: Math.random().toString(36).substr(2),
                               author: this.user,
                               markdown: v,
-                              createdAt: +new Date(),
-                              updatedAt: undefined
+                              isDeleted: false,
+                              createdAt: new Date()
                             },
                             ...this.entries
                           ]
@@ -327,6 +397,7 @@ export class AloudComments {
             entry={it}
             api={this.api}
             firebase={this.firebase}
+            isSmallScreen={this.isSmallScreen}
             depth={1}
           ></aloud-entry>
         ))}

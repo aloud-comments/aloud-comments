@@ -83,6 +83,10 @@ small {
     > span + span::before {
       content: ' · ';
     }
+
+    a.active {
+      border: 1px solid;
+    }
   }
 }
 

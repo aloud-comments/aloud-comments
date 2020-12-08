@@ -1,24 +1,6 @@
 import faker from 'faker'
-import S from 'jsonschema-definer'
 
-export const sAuthor = S.shape({
-  id: S.string(),
-  name: S.string(),
-  image: S.string(),
-  gender: S.string().optional()
-})
-
-export type IAuthor = typeof sAuthor.type;
-
-export const sPost = S.shape({
-  id: S.string(),
-  author: sAuthor,
-  markdown: S.string(),
-  createdAt: S.number(),
-  updatedAt: S.number().optional()
-})
-
-export type IPost = typeof sPost.type;
+import { IAuthor, IPost } from '../types'
 
 export function randomAuthor (): IAuthor {
   const gender = Math.random() > 0.5 ? 'female' : 'male'
@@ -37,8 +19,24 @@ export function randomPost (within?: Date): Omit<IPost, 'author'> {
   return {
     id: Math.random().toString(36).substr(2),
     markdown: faker.lorem.paragraphs(Math.random() * 2, '\n\n'),
-    createdAt: within ? +faker.date.between(within, new Date()) : +randomDate(),
-    updatedAt: undefined
+    createdAt: within ? faker.date.between(within, new Date()) : randomDate(),
+    reaction: {
+      like: new Set(
+        Array(Math.floor(Math.random() ** 3 * 5))
+          .fill(null)
+          .map(() => Math.random().toString(36).substr(2))
+      ),
+      dislike: new Set(
+        Array(Math.floor(Math.random() ** 3 * 5))
+          .fill(null)
+          .map(() => Math.random().toString(36).substr(2))
+      ),
+      bookmark: new Set(
+        Array(Math.floor(Math.random() ** 3 * 5))
+          .fill(null)
+          .map(() => Math.random().toString(36).substr(2))
+      )
+    }
   }
 }
 

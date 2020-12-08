@@ -7,7 +7,7 @@
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { IApi, IFirebaseConfig } from "./components/aloud-comments/aloud-comments";
 import { IApi as IApi1, IFirebaseConfig as IFirebaseConfig1 } from "./components/aloud-comments/aloud-comments";
-import { IAuthor, IPost } from "./utils/faker";
+import { IAuthor, IPost } from "./types";
 export namespace Components {
     interface AloudComments {
         /**
@@ -54,6 +54,7 @@ export namespace Components {
         "depth": number;
         "entry": IPost;
         "firebase": IFirebaseConfig;
+        "isSmallScreen": boolean;
         "parser": {
     parse: (md: string) => string;
   };
@@ -68,6 +69,7 @@ export namespace Components {
         "entry": IPost;
         "firebase": IFirebaseConfig;
         "getChildren": () => Promise<IPost[]>;
+        "isSmallScreen": boolean;
         "limit": number;
         "parent": IAuthor;
         "parser": {
@@ -154,6 +156,7 @@ declare namespace LocalJSX {
         "depth": number;
         "entry": IPost;
         "firebase": IFirebaseConfig;
+        "isSmallScreen": boolean;
         "parser": {
     parse: (md: string) => string;
   };
@@ -167,6 +170,7 @@ declare namespace LocalJSX {
   }) => void;
         "entry": IPost;
         "firebase": IFirebaseConfig;
+        "isSmallScreen": boolean;
         "limit": number;
         "onChildrenCountChanged"?: (event: CustomEvent<{
     entryId: string;

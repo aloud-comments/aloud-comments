@@ -1,8 +1,8 @@
 import Duration from 'native-duration'
 
-export function humanizeDurationToNow (epoch: number): string {
+export function humanizeDurationToNow (since: Date): string {
   const now = new Date()
-  const msec = +now - epoch
+  const msec = +now - +since
 
   if (msec < 5000) {
     return 'Just posted'

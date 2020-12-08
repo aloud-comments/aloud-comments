@@ -1,7 +1,7 @@
 import { Component, Host, Prop, State, h } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 
-import { IAuthor, IPost } from '../../utils/faker'
+import { IAuthor, IPost, IReactionType, ReactionTypes } from '../../types'
 import { humanizeDurationToNow } from '../../utils/humanize'
 import { IApi, IFirebaseConfig } from '../aloud-comments/aloud-comments'
 
@@ -15,7 +15,11 @@ import { IApi, IFirebaseConfig } from '../aloud-comments/aloud-comments'
 })
 export class AloudEntry {
   @Prop() user?: IAuthor;
-  @Prop() entry!: IPost;
+  @Prop({
+    mutable: true
+  })
+  entry!: IPost;
+
   @Prop() api!: IApi;
   @Prop() firebase!: IFirebaseConfig;
   @Prop() depth!: number;
@@ -23,9 +27,11 @@ export class AloudEntry {
     parse: (md: string) => string;
   };
 
+  @Prop() isSmallScreen!: boolean;
+
   @State() isEdit = false;
   @State() isReply = false;
-  @State() maxDepth = 2;
+  @State() isExpanded = false;
   @State() children: IPost[] = [];
   @State() hasMore = true;
   @State() subEntries = new Map<
@@ -51,16 +57,15 @@ export class AloudEntry {
     )
   }
 
-  constructor () {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const cls = this
-
-    const mq = matchMedia('(max-width: 600px)')
-    cls.maxDepth = mq.matches ? 1 : 2
-    mq.onchange = evt => {
-      cls.maxDepth = evt.matches ? 1 : 2
+  get maxDepth (): number {
+    if (this.isSmallScreen) {
+      return 1
     }
 
+    return 2
+  }
+
+  componentWillLoad (): void {
     this.doLoad()
   }
 
@@ -74,6 +79,56 @@ export class AloudEntry {
         this.children = [...this.children, ...result]
         this.hasMore = hasMore
       })
+  }
+
+  getReaction (r: IReactionType): Set<string> {
+    return (this.entry.reaction || {})[r] || new Set()
+  }
+
+  async setReaction (r: IReactionType): Promise<void> {
+    return (async () => {
+      this.entry.reaction = this.entry.reaction || {
+        like: new Set(),
+        dislike: new Set(),
+        bookmark: new Set()
+      }
+
+      if (this.api.reaction) {
+        return this.api
+          .reaction({
+            entryId: this.entry.id,
+            userId: this.user.id,
+            reaction: r
+          })
+          .then(({ changes }) => {
+            for (const k of ReactionTypes) {
+              const c = changes[k] || 0
+              if (c > 0) {
+                this.entry.reaction.dislike.add(this.user.id)
+              } else if (c < 0) {
+                this.entry.reaction.dislike.delete(this.user.id)
+              }
+            }
+          })
+      }
+
+      if (r === 'like') {
+        this.entry.reaction.dislike.delete(this.user.id)
+      } else if (r === 'dislike') {
+        this.entry.reaction.like.delete(this.user.id)
+      }
+
+      if (this.entry.reaction[r].has(this.user.id)) {
+        this.entry.reaction[r].delete(this.user.id)
+      } else {
+        this.entry.reaction[r].add(this.user.id)
+      }
+    })().finally(() => {
+      this.entry = {
+        ...this.entry,
+        reaction: this.entry.reaction
+      }
+    })
   }
 
   render (): HTMLStencilElement {
@@ -102,7 +157,31 @@ export class AloudEntry {
                 value={this.entry.markdown}
               />
             ) : (
-              <div innerHTML={this.parser.parse(this.entry.markdown)} />
+              <div
+                role="button"
+                onClick={() => {
+                  this.isExpanded = true
+                }}
+                innerHTML={(() => {
+                  if (this.isExpanded || !this.isSmallScreen) {
+                    return this.parser.parse(this.entry.markdown)
+                  }
+
+                  const body = document.createElement('body')
+                  body.innerHTML = this.parser.parse(
+                    this.entry.markdown.slice(0, 140)
+                  )
+
+                  const { lastElementChild } = body.firstElementChild || {}
+                  if (lastElementChild instanceof HTMLParagraphElement) {
+                    lastElementChild.innerHTML += '...'
+                  } else {
+                    body.innerHTML += '...'
+                  }
+
+                  return body.innerHTML
+                })()}
+              />
             )}
             <small class="dot-separated">
               {this.entry.author.id === this.user?.id ? (
@@ -139,28 +218,55 @@ export class AloudEntry {
                     {this.isEdit ? 'Save' : 'Edit'}
                   </a>
                 </span>
-              ) : (
+              ) : this.user ? (
                 [
                   // eslint-disable-next-line react/jsx-key
                   <span>
-                    <a role="button" title="Like">
-                      ❤️
+                    <a
+                      role="button"
+                      title="Like"
+                      class={
+                        this.getReaction('like').has(this.user.id)
+                          ? 'active'
+                          : ''
+                      }
+                      onClick={() => this.setReaction('like')}
+                    >
+                      ❤️ {this.getReaction('like').size || ''}
                     </a>
                   </span>,
                   // eslint-disable-next-line react/jsx-key
                   <span>
-                    <a role="button" title="Dislike">
-                      👎
+                    <a
+                      role="button"
+                      title="Dislike"
+                      class={
+                        this.getReaction('dislike').has(this.user.id)
+                          ? 'active'
+                          : ''
+                      }
+                      onClick={() => this.setReaction('dislike')}
+                    >
+                      👎 {this.getReaction('dislike').size || ''}
                     </a>
                   </span>,
                   // eslint-disable-next-line react/jsx-key
                   <span>
-                    <a role="button" title="Bookmark">
-                      🔖
+                    <a
+                      role="button"
+                      title="Bookmark"
+                      class={
+                        this.getReaction('bookmark').has(this.user.id)
+                          ? 'active'
+                          : ''
+                      }
+                      onClick={() => this.setReaction('bookmark')}
+                    >
+                      🔖 {this.getReaction('bookmark').size || ''}
                     </a>
                   </span>
                 ]
-              )}
+              ) : null}
 
               <span>
                 <a
@@ -185,8 +291,8 @@ export class AloudEntry {
                                   id: entryId,
                                   author: this.entry.author,
                                   markdown: v,
-                                  createdAt: +new Date(),
-                                  updatedAt: undefined
+                                  isDeleted: false,
+                                  createdAt: new Date()
                                 },
                                 ...this.children
                               ]
@@ -198,8 +304,8 @@ export class AloudEntry {
                             id: Math.random().toString(36).substr(2),
                             author: this.entry.author,
                             markdown: v,
-                            createdAt: +new Date(),
-                            updatedAt: undefined
+                            isDeleted: false,
+                            createdAt: new Date()
                           },
                           ...this.children
                         ]
@@ -238,6 +344,7 @@ export class AloudEntry {
                 api={this.api}
                 firebase={this.firebase}
                 limit={this.newSubEntriesAllowed}
+                isSmallScreen={this.isSmallScreen}
                 totalSubEntriesLength={this.subEntriesLength}
                 countChangedListener={this.subEntryCountListener}
                 onChildrenCountChanged={evt =>
@@ -252,6 +359,7 @@ export class AloudEntry {
                 api={this.api}
                 firebase={this.firebase}
                 depth={this.depth + 1}
+                isSmallScreen={this.isSmallScreen}
               ></aloud-entry>
             )
           )}
