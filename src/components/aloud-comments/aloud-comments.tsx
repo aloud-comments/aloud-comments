@@ -111,7 +111,7 @@ export class AloudComments {
   @Prop() debug = false;
 
   @State() user?: IAuthor;
-  @State() entries: IPost[] = [];
+  @State() children: IPost[] = [];
   @State() hasMore = true;
   @State() isSmallScreen = false;
 
@@ -261,7 +261,7 @@ export class AloudComments {
      * `null` just stress that it is absolutely no parent, yet can still be switch case'd and comparable
      */
     this.api.get({ parentId: null }).then(({ result, hasMore }) => {
-      this.entries = result
+      this.children = result
       this.hasMore = hasMore
     })
   }
@@ -271,33 +271,49 @@ export class AloudComments {
      * `null` just stress that it is absolutely no parent, yet can still be switch case'd and comparable
      */
     this.api
-      .get({ parentId: null, after: this.entries[this.entries.length - 1]?.id })
+      .get({
+        parentId: null,
+        after: this.children[this.children.length - 1]?.id
+      })
       .then(({ result, hasMore }) => {
-        this.entries = [...this.entries, ...result]
+        this.children = [...this.children, ...result]
         this.hasMore = hasMore
       })
   }
 
-  async doDelete (entryId: string): Promise<void> {
-    if (this.api.delete) {
-      const { status } = await this.api.delete({ entryId })
+  async doDelete ({
+    entryId,
+    hasChildren
+  }: {
+    entryId: string;
+    hasChildren: boolean;
+  }): Promise<void> {
+    return (async () => {
+      if (this.api.delete) {
+        return this.api.delete({ entryId })
+      }
+
+      return {
+        status: hasChildren ? 'suppressed' : 'deleted'
+      }
+    })().then(({ status }) => {
       if (status === 'deleted') {
-        this.entries = this.entries.filter(it => it.id !== entryId)
+        this.children = this.children.filter(it => it.id !== entryId)
       } else {
-        const i = this.entries.map(it => it.id).indexOf(entryId)
-        if (this.entries[i]) {
-          this.entries = [
-            ...this.entries.slice(0, i),
+        const i = this.children.map(it => it.id).indexOf(entryId)
+        if (this.children[i]) {
+          this.children = [
+            ...this.children.slice(0, i),
             {
-              ...this.entries[i],
+              ...this.children[i],
               markdown: '*Deleted*',
               isDeleted: true
             },
-            ...this.entries.slice(i + 1)
+            ...this.children.slice(i + 1)
           ]
         }
       }
-    }
+    })
   }
 
   render (): HTMLStencilElement {
@@ -352,7 +368,7 @@ export class AloudComments {
                                 markdown: v
                               })
                               .then(({ entryId }) => {
-                                this.entries = [
+                                this.children = [
                                   {
                                     id: entryId,
                                     author: this.user,
@@ -360,12 +376,12 @@ export class AloudComments {
                                     isDeleted: false,
                                     createdAt: new Date()
                                   },
-                                  ...this.entries
+                                  ...this.children
                                 ]
                               })
                           }
 
-                          this.entries = [
+                          this.children = [
                             {
                               id: Math.random().toString(36).substr(2),
                               author: this.user,
@@ -373,7 +389,7 @@ export class AloudComments {
                               isDeleted: false,
                               createdAt: new Date()
                             },
-                            ...this.entries
+                            ...this.children
                           ]
                         })
                         .finally(() => {
@@ -389,7 +405,7 @@ export class AloudComments {
           </div>
         </article>
 
-        {this.entries.map(it => (
+        {this.children.map(it => (
           <aloud-entry
             key={it.id}
             parser={this.parser}
@@ -399,6 +415,7 @@ export class AloudComments {
             firebase={this.firebase}
             isSmallScreen={this.isSmallScreen}
             depth={1}
+            onDelete={evt => this.doDelete(evt.detail)}
           ></aloud-entry>
         ))}
 

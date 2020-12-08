@@ -157,6 +157,10 @@ declare namespace LocalJSX {
         "entry": IPost;
         "firebase": IFirebaseConfig;
         "isSmallScreen": boolean;
+        "onDelete"?: (event: CustomEvent<{
+    entryId: string;
+    hasChildren: boolean;
+  }>) => void;
         "parser": {
     parse: (md: string) => string;
   };
@@ -175,6 +179,10 @@ declare namespace LocalJSX {
         "onChildrenCountChanged"?: (event: CustomEvent<{
     entryId: string;
     count: number;
+  }>) => void;
+        "onDelete"?: (event: CustomEvent<{
+    entryId: string;
+    hasChildren: boolean;
   }>) => void;
         "parent": IAuthor;
         "parser": {
