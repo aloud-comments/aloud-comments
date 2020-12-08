@@ -35,6 +35,11 @@ export namespace Components {
         "parser": {
     parse: (md: string) => string;
   };
+        "theme": string;
+        /**
+          * URL to be used for the database
+         */
+        "url": string;
     }
     interface AloudEditor {
         "firebase": IFirebaseConfig;
@@ -138,6 +143,11 @@ declare namespace LocalJSX {
         "parser"?: {
     parse: (md: string) => string;
   };
+        "theme"?: string;
+        /**
+          * URL to be used for the database
+         */
+        "url"?: string;
     }
     interface AloudEditor {
         "firebase": IFirebaseConfig;

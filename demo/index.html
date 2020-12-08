@@ -6,12 +6,21 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0"
     />
+
     <title>Aloud Playground</title>
 
-    <link rel="stylesheet" href="https://fonts.xz.style/serve/inter.css" />
     <link
+      class="theme"
       rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@exampledev/new.css@1.1.2/new.min.css"
+      href="https://unpkg.com/awsm.css/dist/awsm_theme_black.min.css"
+      media="(prefers-color-scheme: dark)"
+    />
+
+    <link
+      class="theme"
+      rel="stylesheet"
+      href="https://unpkg.com/awsm.css/dist/awsm.min.css"
+      media="(prefers-color-scheme: no-preference), (prefers-color-scheme: light)"
     />
 
     <style>
@@ -21,6 +30,10 @@
           padding-right: 0;
         }
       }
+
+      button.scheme-toggle {
+        float: right;
+      }
     </style>
   </head>
   <body style="display: flex; flex-direction: column; align-items: center">
@@ -29,27 +42,56 @@
     <!-- prettier-ignore -->
     <style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
 
-    <main>
-      <h2 style="margin-bottom: 1em">
+    <header>
+      <h1>
         The outside CSS is
-        <a href="https://newcss.net" target="_blank" rel="noopener noreferrer"
-          >new.css</a
+        <a
+          href="https://igoradamenko.github.io/awsm.css"
+          target="_blank"
+          rel="noopener noreferrer"
+          >awsm.css</a
         >
         - no CSS resets here.
-      </h2>
+      </h1>
 
-      <aloud-comments style="display: block; border: 1px solid red" debug>
-        Loading...
-      </aloud-comments>
-    </main>
+      <nav>
+        <ul>
+          <li>
+            <a href="#/">Home</a>
+          </li>
+          <li>
+            <a href="#/spa1">SPA-1</a>
+          </li>
+          <li>
+            <a href="#/spa2">SPA-2</a>
+          </li>
+          <li>
+            Theme:
+            <select name="theme-switch">
+              <option value="white" selected>white</option>
+              <option value="gondola">gondola</option>
+              <option value="mischka">mischka</option>
+              <option value="big-stone">big-stone</option>
+              <option value="black">black</option>
+              <option value="tasman">tasman</option>
+              <option value="pastel-pink">pastel-pink</option>
+              <option value="pearl-lusta">pearl-lusta</option>
+            </select>
+          </li>
 
-    <script
-      type="module"
-      src="https://unpkg.com/aloud-comments@^0.2.2"
-    ></script>
-    <script
-      nomodule
-      src="https://unpkg.com/aloud-comments@^0.2.2/loader"
-    ></script>
+          <button class="scheme-toggle" type="button">🌓 ⇄ 💡</button>
+        </ul>
+      </nav>
+    </header>
+
+    <aloud-comments style="display: block; border: 1px solid red" debug>
+      Loading...
+    </aloud-comments>
+
+    <script src="./js/router.js"></script>
+    <script src="./js/theme.js"></script>
+
+    <script type="module" src="https://unpkg.com/aloud-comments"></script>
+    <script nomodule src="https://unpkg.com/aloud-comments/loader"></script>
   </body>
 </html>

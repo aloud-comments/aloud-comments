@@ -1,4 +1,4 @@
-import { Component, Prop, State, h } from '@stencil/core'
+import { Component, Host, Prop, State, h } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 import firebaseui from 'firebaseui'
 
@@ -13,6 +13,19 @@ import { ShowdownParser } from '../../utils/parser'
   shadow: true
 })
 export class AloudComments implements EntryViewer {
+  /**
+   * URL to be used for the database
+   */
+  @Prop() url = location.href.replace(/#[^/].*$/, '').replace(/#\/$/, '');
+
+  @Prop({
+    mutable: true,
+    reflect: true
+  })
+  theme = matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'black'
+    : 'white';
+
   /**
    * Firebase configuration. Will be `JSON.parse()`
    *
@@ -86,6 +99,16 @@ export class AloudComments implements EntryViewer {
 
   get limit (): number {
     return this.maxChildrenAllowed
+  }
+
+  get themeUrl (): string {
+    if (this.theme.includes('://')) {
+      return this.theme
+    }
+
+    return `https://unpkg.com/awsm.css/dist/awsm${
+      this.theme ? `_theme_${this.theme}` : ''
+    }.min.css`
   }
 
   constructor () {
@@ -237,113 +260,122 @@ export class AloudComments implements EntryViewer {
 
   render (): HTMLStencilElement {
     return (
-      <main>
-        <article class="media mb-4">
-          <figure class="media-left">
-            <p class="image is-64x64">
-              {this.user ? (
-                <img
-                  src={this.user.image}
-                  alt={this.user.name}
-                  title={this.user.name}
-                />
-              ) : (
-                <img src="https://www.gravatar.com/avatar?d=mp" />
-              )}
-            </p>
-          </figure>
-          <div class="media-content">
-            <div class="field">
-              <p class="control">
-                <div class="textarea">
-                  <aloud-editor
-                    parser={this.parser}
-                    firebase={this.firebase}
-                    ref={el => {
-                      this.mainEditor = el
-                    }}
+      <Host>
+        <base href="/" />
+        <link rel="stylesheet" href={this.themeUrl} />
+
+        <html class="hide-scrollbar">
+          <article class="media mb-4">
+            <figure class="media-left">
+              <p class="image is-64x64">
+                {this.user ? (
+                  <img
+                    src={this.user.image}
+                    alt={this.user.name}
+                    title={this.user.name}
                   />
-                </div>
+                ) : (
+                  <img src="https://www.gravatar.com/avatar?d=mp" />
+                )}
               </p>
-            </div>
-            <nav class="level">
-              <div class="level-left">
-                <div class="level-item">
-                  <button
-                    class="button is-info"
-                    type="button"
-                    onClick={() => {
-                      this.mainEditor
-                        .getValue()
-                        .then(async v => {
-                          if (!this.user) {
-                            return
-                          }
-
-                          if (this.api.post) {
-                            return this.api
-                              .post({
-                                authorId: this.user.id,
-                                markdown: v
-                              })
-                              .then(({ entryId }) => {
-                                this.children = [
-                                  {
-                                    id: entryId,
-                                    author: this.user,
-                                    markdown: v,
-                                    isDeleted: false,
-                                    createdAt: new Date()
-                                  },
-                                  ...this.children
-                                ]
-                              })
-                          }
-
-                          this.children = [
-                            {
-                              id: Math.random().toString(36).substr(2),
-                              author: this.user,
-                              markdown: v,
-                              isDeleted: false,
-                              createdAt: new Date()
-                            },
-                            ...this.children
-                          ]
-                        })
-                        .finally(() => {
-                          this.mainEditor.value = ''
-                        })
-                    }}
-                  >
-                    Submit
-                  </button>
-                </div>
+            </figure>
+            <div class="media-content">
+              <div class="field">
+                <p class="control">
+                  <div class="textarea">
+                    <aloud-editor
+                      parser={this.parser}
+                      firebase={this.firebase}
+                      ref={el => {
+                        this.mainEditor = el
+                      }}
+                    />
+                  </div>
+                </p>
               </div>
-            </nav>
-          </div>
-        </article>
+              <nav class="level">
+                <div class="level-left">
+                  <div class="level-item">
+                    <button
+                      class="button is-info"
+                      type="button"
+                      onClick={() => {
+                        this.mainEditor
+                          .getValue()
+                          .then(async v => {
+                            if (!this.user) {
+                              return
+                            }
 
-        {this.children.map(it => (
-          <aloud-entry
-            key={it.id}
-            parser={this.parser}
-            user={this.user}
-            entry={it}
-            api={this.api}
-            firebase={this.firebase}
-            isSmallScreen={this.isSmallScreen}
-            depth={1}
-            onDelete={evt => this.doDelete(evt.detail)}
-          ></aloud-entry>
-        ))}
+                            if (this.api.post) {
+                              return this.api
+                                .post({
+                                  authorId: this.user.id,
+                                  markdown: v
+                                })
+                                .then(({ entryId }) => {
+                                  this.children = [
+                                    {
+                                      id: entryId,
+                                      author: this.user,
+                                      markdown: v,
+                                      isDeleted: false,
+                                      createdAt: new Date()
+                                    },
+                                    ...this.children
+                                  ]
+                                })
+                            }
 
-        {this.hasMore ? (
-          <button class="more" type="button" onClick={() => this.doLoad(true)}>
-            Click for more
-          </button>
-        ) : null}
-      </main>
+                            this.children = [
+                              {
+                                id: Math.random().toString(36).substr(2),
+                                author: this.user,
+                                markdown: v,
+                                isDeleted: false,
+                                createdAt: new Date()
+                              },
+                              ...this.children
+                            ]
+                          })
+                          .finally(() => {
+                            this.mainEditor.value = ''
+                          })
+                      }}
+                    >
+                      Submit
+                    </button>
+                  </div>
+                </div>
+              </nav>
+            </div>
+          </article>
+
+          {this.children.map(it => (
+            <aloud-entry
+              key={it.id}
+              parser={this.parser}
+              user={this.user}
+              entry={it}
+              api={this.api}
+              firebase={this.firebase}
+              isSmallScreen={this.isSmallScreen}
+              depth={1}
+              onDelete={evt => this.doDelete(evt.detail)}
+            ></aloud-entry>
+          ))}
+
+          {this.hasMore ? (
+            <button
+              class="more"
+              type="button"
+              onClick={() => this.doLoad(true)}
+            >
+              Click for more
+            </button>
+          ) : null}
+        </html>
+      </Host>
     )
   }
 }

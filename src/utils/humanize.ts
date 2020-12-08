@@ -4,7 +4,7 @@ export function humanizeDurationToNow (since: Date): string {
   const now = new Date()
   const msec = +now - +since
 
-  if (msec < 5000) {
+  if (msec < 60000) {
     return 'Just posted'
   }
 
