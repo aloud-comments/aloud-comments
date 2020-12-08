@@ -25,6 +25,7 @@ import {
 @Component({
   tag: 'aloud-entry',
   styleUrl: 'entry.scss',
+  assetsDirs: ['../assets'],
   scoped: true
 })
 export class AloudEntry implements EntryViewer, Entry {
@@ -33,6 +34,8 @@ export class AloudEntry implements EntryViewer, Entry {
     mutable: true
   })
   entry!: IPost;
+
+  @Prop() cmTheme!: string;
 
   @Prop() api!: IApi;
   @Prop() firebase!: IFirebaseConfig;
@@ -117,9 +120,9 @@ export class AloudEntry implements EntryViewer, Entry {
             </h5>
             {this.isEdit ? (
               <aloud-editor
-                class="textarea"
                 parser={this.parser}
                 firebase={this.firebase}
+                theme={this.cmTheme}
                 ref={el => {
                   this.editor = el
                 }}
@@ -158,8 +161,8 @@ export class AloudEntry implements EntryViewer, Entry {
 
           {this.isReply ? (
             <aloud-editor
-              class="textarea"
               parser={this.parser}
+              theme={this.cmTheme}
               ref={el => {
                 this.replier = el
               }}
@@ -180,6 +183,7 @@ export class AloudEntry implements EntryViewer, Entry {
                 isSmallScreen={this.isSmallScreen}
                 totalSubEntriesLength={this.subEntriesLength}
                 countChangedListener={this.subEntryCountListener}
+                cmTheme={this.cmTheme}
                 onDelete={evt => this.doDelete(evt.detail)}
                 onChildrenCountChanged={evt =>
                   this.subEntryCountListener(evt.detail)
@@ -194,6 +198,7 @@ export class AloudEntry implements EntryViewer, Entry {
                 firebase={this.firebase}
                 depth={this.depth + 1}
                 isSmallScreen={this.isSmallScreen}
+                cmTheme={this.cmTheme}
                 onDelete={evt => this.doDelete(evt.detail)}
               ></aloud-entry>
             )

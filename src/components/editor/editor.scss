@@ -1,5 +1,6 @@
 @import '~bulma/css/bulma.css';
 @import '~codemirror/lib/codemirror.css';
+@import '~codemirror/theme/monokai.css';
 
 :host {
   display: grid;
@@ -31,6 +32,12 @@
 
 .CodeMirror {
   height: 100%;
+  opacity: 0.5;
+
+  * {
+    opacity: 1;
+    background-color: transparent;
+  }
 }
 
 .hide-scrollbar {

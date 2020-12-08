@@ -1,4 +1,4 @@
-import { EventEmitter, h } from '@stencil/core'
+import { EventEmitter, getAssetPath, h } from '@stencil/core'
 
 import { IApi, IAuthor, IPost, IReactionType, ReactionTypes } from '../types'
 import { humanizeDurationToNow } from '../utils/humanize'
@@ -88,7 +88,10 @@ export function initEntry<T extends Entry> (cls: T): void {
             class={cls.getReaction('like').has(cls.user.id) ? 'active' : ''}
             onClick={() => cls.setReaction('like')}
           >
-            ❤️ {cls.getReaction('like').size || ''}
+            <img class="icon" src={getAssetPath('../assets/heart.svg')} />
+            {cls.getReaction('like').size ? (
+              <span>{cls.getReaction('like').size}</span>
+            ) : null}
           </a>
         </span>,
         <span>
@@ -98,7 +101,10 @@ export function initEntry<T extends Entry> (cls: T): void {
             class={cls.getReaction('dislike').has(cls.user.id) ? 'active' : ''}
             onClick={() => cls.setReaction('dislike')}
           >
-            👎 {cls.getReaction('dislike').size || ''}
+            <img class="icon" src={getAssetPath('../assets/dislike.svg')} />
+            {cls.getReaction('dislike').size ? (
+              <span>{cls.getReaction('dislike').size}</span>
+            ) : null}
           </a>
         </span>,
         <span>
@@ -108,7 +114,10 @@ export function initEntry<T extends Entry> (cls: T): void {
             class={cls.getReaction('bookmark').has(cls.user.id) ? 'active' : ''}
             onClick={() => cls.setReaction('bookmark')}
           >
-            🔖 {cls.getReaction('bookmark').size || ''}
+            <img class="icon" src={getAssetPath('../assets/bookmark.svg')} />
+            {cls.getReaction('bookmark').size ? (
+              <span>{cls.getReaction('bookmark').size}</span>
+            ) : null}
           </a>
         </span>,
         <span>

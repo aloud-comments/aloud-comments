@@ -26,6 +26,7 @@ import {
 @Component({
   tag: 'aloud-subentry',
   styleUrl: 'subentry.scss',
+  assetsDirs: ['../assets'],
   scoped: true
 })
 export class AloudSubEntry implements EntryViewer, Entry {
@@ -35,6 +36,8 @@ export class AloudSubEntry implements EntryViewer, Entry {
     mutable: true
   })
   entry!: IPost;
+
+  @Prop() cmTheme!: string;
 
   @Prop() api!: IApi;
   @Prop() firebase!: IFirebaseConfig;
@@ -94,6 +97,7 @@ export class AloudSubEntry implements EntryViewer, Entry {
           <aloud-editor
             parser={this.parser}
             firebase={this.firebase}
+            theme={this.cmTheme}
             ref={el => {
               this.editor = el
             }}
@@ -134,6 +138,7 @@ export class AloudSubEntry implements EntryViewer, Entry {
 
         {this.isReply ? (
           <aloud-editor
+            theme={this.cmTheme}
             ref={el => {
               this.replier = el
             }}
@@ -155,6 +160,7 @@ export class AloudSubEntry implements EntryViewer, Entry {
             isSmallScreen={this.isSmallScreen}
             totalSubEntriesLength={this.totalSubEntriesLength}
             countChangedListener={this.countChangedListener}
+            cmTheme={this.cmTheme}
             onDelete={evt => this.doDelete(evt.detail)}
             onChildrenCountChanged={evt =>
               this.countChangedListener(evt.detail)

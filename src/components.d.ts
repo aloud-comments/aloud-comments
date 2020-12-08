@@ -17,6 +17,10 @@ export namespace Components {
          */
         "api": IApi;
         /**
+          * CodeMirror theme
+         */
+        "cmTheme": string;
+        /**
           * Whether to generate random entries  Requires `faker` to be installed.
          */
         "debug": boolean;
@@ -47,6 +51,7 @@ export namespace Components {
         "parser": {
     parse: (md: string) => string;
   };
+        "theme": string;
         /**
           * Markdown to be parsed in-and-out of the editor  Use `.getValue()` to get and update the value
          */
@@ -54,6 +59,7 @@ export namespace Components {
     }
     interface AloudEntry {
         "api": IApi;
+        "cmTheme": string;
         "depth": number;
         "entry": IPost;
         "firebase": IFirebaseConfig;
@@ -65,6 +71,7 @@ export namespace Components {
     }
     interface AloudSubentry {
         "api": IApi;
+        "cmTheme": string;
         "countChangedListener": (change: {
     entryId: string;
     count: number;
@@ -125,6 +132,10 @@ declare namespace LocalJSX {
          */
         "api"?: IApi;
         /**
+          * CodeMirror theme
+         */
+        "cmTheme"?: string;
+        /**
           * Whether to generate random entries  Requires `faker` to be installed.
          */
         "debug"?: boolean;
@@ -154,6 +165,7 @@ declare namespace LocalJSX {
         "parser": {
     parse: (md: string) => string;
   };
+        "theme": string;
         /**
           * Markdown to be parsed in-and-out of the editor  Use `.getValue()` to get and update the value
          */
@@ -161,6 +173,7 @@ declare namespace LocalJSX {
     }
     interface AloudEntry {
         "api": IApi;
+        "cmTheme": string;
         "depth": number;
         "entry": IPost;
         "firebase": IFirebaseConfig;
@@ -176,6 +189,7 @@ declare namespace LocalJSX {
     }
     interface AloudSubentry {
         "api": IApi;
+        "cmTheme": string;
         "countChangedListener": (change: {
     entryId: string;
     count: number;

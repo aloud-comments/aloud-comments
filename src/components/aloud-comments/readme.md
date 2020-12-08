@@ -16,6 +16,8 @@
 | `firebaseui`            | --                     | Custom `firebaseui.auth.AuthUI` object                                                                          | `AuthUI`                             | `undefined`                                                                                     |
 | `maxChildrenAllowed`    | `max-children-allowed` | Number of children to load by default                                                                           | `number`                             | `3`                                                                                             |
 | `parser`                | --                     |                                                                                                                 | `{ parse: (md: string) => string; }` | `undefined`                                                                                     |
+| `theme`                 | `theme`                |                                                                                                                 | `string`                             | `matchMedia('(prefers-color-scheme: dark)').matches     ? 'black'     : 'white'`                |
+| `url`                   | `url`                  | URL to be used for the database                                                                                 | `string`                             | `location.href.replace(/#[^/].*$/, '').replace(/#\/$/, '')`                                     |
 
 
 ## Dependencies

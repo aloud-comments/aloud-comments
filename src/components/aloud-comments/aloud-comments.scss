@@ -16,19 +16,21 @@ p {
   margin-bottom: 0.5em;
 }
 
-// Fix Bulma styles
-.content :not(a) {
-  color: unset !important;
+img.icon {
+  height: 1rem;
+  width: auto;
+
+  & + span {
+    margin-left: 0.3rem;
+  }
 }
 
-.button {
-  max-height: 1.5em;
-}
-
-.textarea {
+aloud-editor {
   height: 200px;
-  width: unset;
-  min-width: unset;
+}
+
+aloud-subentry aloud-editor {
+  height: unset;
 }
 
 .hide-scrollbar {
@@ -60,12 +62,19 @@ small {
   display: block;
 
   &.dot-separated {
-    > span + span::before {
-      content: ' · ';
-    }
+    > span {
+      & + span::before {
+        content: ' · ';
+      }
 
-    a.active {
-      border: 1px solid;
+      > a {
+        padding: 0.2rem;
+
+        &.active {
+          border: 1px solid;
+          border-radius: 0.2rem;
+        }
+      }
     }
   }
 }
@@ -101,4 +110,13 @@ span.tooltip {
     top: 44px;
     left: 70px;
   }
+}
+
+// Fix Bulma styles
+.content :not(a) {
+  color: unset !important;
+}
+
+.tabs a {
+  color: unset;
 }

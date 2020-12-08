@@ -33,6 +33,8 @@ export class Editor {
     parse: (md: string) => string;
   };
 
+  @Prop() theme!: string;
+
   @State() html = '';
   @State() _isEdit = true;
 
@@ -77,10 +79,9 @@ export class Editor {
       extraKeys: {
         Tab: () => shiftTabs(1),
         'Shift-Tab': () => shiftTabs(-1)
-      }
+      },
+      theme: this.theme
     })
-
-    this.cm.setValue(this.value)
   }
 
   @Method()

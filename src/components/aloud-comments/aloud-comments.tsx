@@ -27,6 +27,11 @@ export class AloudComments implements EntryViewer {
     : 'white';
 
   /**
+   * CodeMirror theme
+   */
+  @Prop() cmTheme = 'default';
+
+  /**
    * Firebase configuration. Will be `JSON.parse()`
    *
    * Requires either string version in HTML or Object version in JSX
@@ -282,15 +287,14 @@ export class AloudComments implements EntryViewer {
             <div class="media-content">
               <div class="field">
                 <p class="control">
-                  <div class="textarea">
-                    <aloud-editor
-                      parser={this.parser}
-                      firebase={this.firebase}
-                      ref={el => {
-                        this.mainEditor = el
-                      }}
-                    />
-                  </div>
+                  <aloud-editor
+                    parser={this.parser}
+                    firebase={this.firebase}
+                    theme={this.cmTheme}
+                    ref={el => {
+                      this.mainEditor = el
+                    }}
+                  />
                 </p>
               </div>
               <nav class="level">
@@ -361,6 +365,7 @@ export class AloudComments implements EntryViewer {
               firebase={this.firebase}
               isSmallScreen={this.isSmallScreen}
               depth={1}
+              cmTheme={this.cmTheme}
               onDelete={evt => this.doDelete(evt.detail)}
             ></aloud-entry>
           ))}
