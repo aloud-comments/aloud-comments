@@ -22,17 +22,17 @@ export function randomPost (within?: Date): Omit<IPost, 'author'> {
     createdAt: within ? faker.date.between(within, new Date()) : randomDate(),
     reaction: {
       like: new Set(
-        Array(Math.floor(Math.random() ** 3 * 5))
+        Array(Math.floor(Math.random() ** 3 * 10))
           .fill(null)
           .map(() => Math.random().toString(36).substr(2))
       ),
       dislike: new Set(
-        Array(Math.floor(Math.random() ** 3 * 5))
+        Array(Math.floor(Math.random() ** 2 * 3))
           .fill(null)
           .map(() => Math.random().toString(36).substr(2))
       ),
       bookmark: new Set(
-        Array(Math.floor(Math.random() ** 3 * 5))
+        Array(Math.floor(Math.random() ** 3 * 10))
           .fill(null)
           .map(() => Math.random().toString(36).substr(2))
       )

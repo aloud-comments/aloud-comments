@@ -2,53 +2,17 @@ import { Component, Prop, State, h } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 import firebaseui from 'firebaseui'
 
-import { IAuthor, IPost, IReactionType } from '../../types'
+import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
+import { IApi, IAuthor, IFirebaseConfig, IPost } from '../../types'
 import { randomAuthor, randomPost } from '../../utils/faker'
 import { ShowdownParser } from '../../utils/parser'
-
-export interface IApi {
-  get: (p: {
-    parentId: string | null;
-    after?: string;
-    limit?: number;
-  }) => Promise<{
-    result: IPost[];
-    hasMore: boolean;
-  }>;
-  post?: (p: {
-    authorId: string;
-    parentId?: string;
-    markdown: string;
-  }) => Promise<{
-    entryId: string;
-  }>;
-  update?: (p: { entryId: string; markdown: string }) => Promise<void>;
-  reaction?: (p: {
-    entryId: string;
-    userId: string;
-    reaction: IReactionType;
-  }) => Promise<{
-    changes: {
-      [t in IReactionType]?: number;
-    };
-  }>;
-  delete?: (p: {
-    entryId: string;
-  }) => Promise<{
-    status: 'deleted' | 'suppressed';
-  }>;
-}
-
-export type IFirebaseConfig = {
-  [k: string]: unknown;
-};
 
 @Component({
   tag: 'aloud-comments',
   styleUrl: 'aloud-comments.scss',
   shadow: true
 })
-export class AloudComments {
+export class AloudComments implements EntryViewer {
   /**
    * Firebase configuration. Will be `JSON.parse()`
    *
@@ -116,6 +80,17 @@ export class AloudComments {
   @State() isSmallScreen = false;
 
   mainEditor: HTMLAloudEditorElement;
+
+  doLoad: (forced: boolean) => void;
+  doDelete: (p: { entryId: string; hasChildren: boolean }) => Promise<void>;
+
+  get limit (): number {
+    return this.maxChildrenAllowed
+  }
+
+  constructor () {
+    initEntryViewer(this)
+  }
 
   componentWillLoad (): void {
     const mq = matchMedia('(max-width: 600px)')
@@ -243,7 +218,7 @@ export class AloudComments {
         return async ({ parentId, after, limit = this.maxChildrenAllowed }) => {
           let out = (
             posts.children.get(parentId || null) || []
-          ).sort((i1, i2) => (i1.createdAt < i2.createdAt ? -1 : 1))
+          ).sort((i1, i2) => (i1.createdAt < i2.createdAt ? 1 : -1))
 
           const i = after ? out.map(({ id }) => id).indexOf(after) : -1
           if (i !== -1) {
@@ -257,63 +232,7 @@ export class AloudComments {
         }
       })()
 
-    /**
-     * `null` just stress that it is absolutely no parent, yet can still be switch case'd and comparable
-     */
-    this.api.get({ parentId: null }).then(({ result, hasMore }) => {
-      this.children = result
-      this.hasMore = hasMore
-    })
-  }
-
-  doLoad (): void {
-    /**
-     * `null` just stress that it is absolutely no parent, yet can still be switch case'd and comparable
-     */
-    this.api
-      .get({
-        parentId: null,
-        after: this.children[this.children.length - 1]?.id
-      })
-      .then(({ result, hasMore }) => {
-        this.children = [...this.children, ...result]
-        this.hasMore = hasMore
-      })
-  }
-
-  async doDelete ({
-    entryId,
-    hasChildren
-  }: {
-    entryId: string;
-    hasChildren: boolean;
-  }): Promise<void> {
-    return (async () => {
-      if (this.api.delete) {
-        return this.api.delete({ entryId })
-      }
-
-      return {
-        status: hasChildren ? 'suppressed' : 'deleted'
-      }
-    })().then(({ status }) => {
-      if (status === 'deleted') {
-        this.children = this.children.filter(it => it.id !== entryId)
-      } else {
-        const i = this.children.map(it => it.id).indexOf(entryId)
-        if (this.children[i]) {
-          this.children = [
-            ...this.children.slice(0, i),
-            {
-              ...this.children[i],
-              markdown: '*Deleted*',
-              isDeleted: true
-            },
-            ...this.children.slice(i + 1)
-          ]
-        }
-      }
-    })
+    this.doLoad(false)
   }
 
   render (): HTMLStencilElement {
@@ -420,7 +339,7 @@ export class AloudComments {
         ))}
 
         {this.hasMore ? (
-          <button class="more" type="button" onClick={() => this.doLoad()}>
+          <button class="more" type="button" onClick={() => this.doLoad(true)}>
             Click for more
           </button>
         ) : null}

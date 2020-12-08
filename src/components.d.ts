@@ -5,9 +5,7 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
-import { IApi, IFirebaseConfig } from "./components/aloud-comments/aloud-comments";
-import { IApi as IApi1, IFirebaseConfig as IFirebaseConfig1 } from "./components/aloud-comments/aloud-comments";
-import { IAuthor, IPost } from "./types";
+import { IApi, IAuthor, IFirebaseConfig, IPost } from "./types";
 export namespace Components {
     interface AloudComments {
         /**

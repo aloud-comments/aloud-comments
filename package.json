@@ -1,6 +1,6 @@
 {
   "name": "aloud-comments",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Web Component commenting engine based on Firebase (and shadow DOM)",
   "repository": "github:aloud-comments/aloud-comments",
   "license": "MIT",

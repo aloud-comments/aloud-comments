@@ -11,7 +11,7 @@ import { Component, Host, Method, Prop, State, h } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 import CodeMirror from 'codemirror'
 
-import { IFirebaseConfig } from '../aloud-comments/aloud-comments'
+import { IFirebaseConfig } from '../../types'
 
 /**
  * @internal

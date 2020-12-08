@@ -9,9 +9,15 @@ import {
 } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 
-import { IAuthor, IPost, IReactionType, ReactionTypes } from '../../types'
-import { humanizeDurationToNow } from '../../utils/humanize'
-import { IApi, IFirebaseConfig } from '../aloud-comments/aloud-comments'
+import { Entry, initEntry } from '../../base/Entry'
+import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
+import {
+  IApi,
+  IAuthor,
+  IFirebaseConfig,
+  IPost,
+  IReactionType
+} from '../../types'
 
 /**
  * @internal
@@ -21,7 +27,7 @@ import { IApi, IFirebaseConfig } from '../aloud-comments/aloud-comments'
   styleUrl: 'entry.scss',
   scoped: true
 })
-export class AloudEntry {
+export class AloudEntry implements EntryViewer, Entry {
   @Prop() user?: IAuthor;
   @Prop({
     mutable: true
@@ -54,7 +60,11 @@ export class AloudEntry {
     }
   >();
 
-  readonly newSubEntriesAllowed = 2;
+  readonly limit = 3;
+
+  getReaction: (r: IReactionType) => Set<string>;
+  setReaction: (r: IReactionType) => Promise<void>;
+  getSmallNav: (showAuthor: boolean) => HTMLElement;
 
   subEntryCountListener = (p: { entryId: string; count: number }): void => {
     this.subEntries.set(p.entryId, { count: p.count })
@@ -62,6 +72,9 @@ export class AloudEntry {
 
   editor: HTMLAloudEditorElement;
   replier: HTMLAloudEditorElement;
+
+  doLoad: (forced: boolean) => void;
+  doDelete: (p: { entryId: string; hasChildren: boolean }) => Promise<void>;
 
   get subEntriesLength (): number {
     return Array.from(this.subEntries.values()).reduce(
@@ -78,105 +91,10 @@ export class AloudEntry {
     return 2
   }
 
-  componentWillLoad (): void {
-    this.doLoad()
-  }
-
-  doLoad (): void {
-    this.api
-      .get({
-        parentId: this.entry.id,
-        after: this.children[this.children.length - 1]?.id
-      })
-      .then(({ result, hasMore }) => {
-        this.children = [...this.children, ...result]
-        this.hasMore = hasMore
-      })
-  }
-
-  async doDelete ({
-    entryId,
-    hasChildren
-  }: {
-    entryId: string;
-    hasChildren: boolean;
-  }): Promise<void> {
-    return (async () => {
-      if (this.api.delete) {
-        return this.api.delete({ entryId })
-      }
-
-      return {
-        status: hasChildren ? 'suppressed' : 'deleted'
-      }
-    })().then(({ status }) => {
-      if (status === 'deleted') {
-        this.children = this.children.filter(it => it.id !== entryId)
-      } else {
-        const i = this.children.map(it => it.id).indexOf(entryId)
-        if (this.children[i]) {
-          this.children = [
-            ...this.children.slice(0, i),
-            {
-              ...this.children[i],
-              markdown: '*Deleted*',
-              isDeleted: true
-            },
-            ...this.children.slice(i + 1)
-          ]
-        }
-      }
-    })
-  }
-
-  getReaction (r: IReactionType): Set<string> {
-    return (this.entry.reaction || {})[r] || new Set()
-  }
-
-  async setReaction (r: IReactionType): Promise<void> {
-    return (async () => {
-      this.entry.reaction = this.entry.reaction || {
-        like: new Set(),
-        dislike: new Set(),
-        bookmark: new Set()
-      }
-
-      if (this.api.reaction) {
-        return this.api
-          .reaction({
-            entryId: this.entry.id,
-            userId: this.user.id,
-            reaction: r
-          })
-          .then(({ changes }) => {
-            for (const k of ReactionTypes) {
-              const c = changes[k] || 0
-              if (c > 0) {
-                this.entry.reaction.dislike.add(this.user.id)
-              } else if (c < 0) {
-                this.entry.reaction.dislike.delete(this.user.id)
-              }
-            }
-          })
-      }
-
-      if (r === 'like') {
-        this.entry.reaction.dislike.delete(this.user.id)
-      } else if (r === 'dislike') {
-        this.entry.reaction.like.delete(this.user.id)
-      }
-
-      if (this.entry.reaction[r].has(this.user.id)) {
-        this.entry.reaction[r].delete(this.user.id)
-      } else {
-        this.entry.reaction[r].add(this.user.id)
-      }
-    })().finally(() => {
-      this.entry = {
-        ...this.entry,
-        reaction: this.entry.reaction
-      }
-    })
+  constructor () {
+    initEntryViewer(this)
+    initEntry(this)
+    this.doLoad(false)
   }
 
   render (): HTMLStencilElement {
@@ -193,7 +111,10 @@ export class AloudEntry {
         </figure>
         <div class="media-content">
           <div class="content">
-            <h5>{this.entry.author.name}</h5>
+            <h5>
+              {this.entry.author.name}
+              {this.entry.author.id === this.user?.id ? <i>{' (me)'}</i> : null}
+            </h5>
             {this.isEdit ? (
               <aloud-editor
                 class="textarea"
@@ -231,167 +152,8 @@ export class AloudEntry {
                 })()}
               />
             )}
-            <small class="dot-separated">
-              {(() => {
-                const out: HTMLSpanElement[] = []
-                const isSameAsCurrentUser
-                  = this.entry.author.id === this.user?.id
 
-                if (!this.entry.isDeleted && this.user) {
-                  out.push(
-                    <span>
-                      <a
-                        role="button"
-                        title="Like"
-                        class={
-                          this.getReaction('like').has(this.user.id)
-                            ? 'active'
-                            : ''
-                        }
-                        onClick={() => this.setReaction('like')}
-                      >
-                        ❤️ {this.getReaction('like').size || ''}
-                      </a>
-                    </span>,
-                    <span>
-                      <a
-                        role="button"
-                        title="Dislike"
-                        class={
-                          this.getReaction('dislike').has(this.user.id)
-                            ? 'active'
-                            : ''
-                        }
-                        onClick={() => this.setReaction('dislike')}
-                      >
-                        👎 {this.getReaction('dislike').size || ''}
-                      </a>
-                    </span>,
-                    <span>
-                      <a
-                        role="button"
-                        title="Bookmark"
-                        class={
-                          this.getReaction('bookmark').has(this.user.id)
-                            ? 'active'
-                            : ''
-                        }
-                        onClick={() => this.setReaction('bookmark')}
-                      >
-                        🔖 {this.getReaction('bookmark').size || ''}
-                      </a>
-                    </span>,
-                    <span>
-                      <a
-                        role="button"
-                        onClick={() => {
-                          if (this.replier) {
-                            this.replier.getValue().then(async v => {
-                              if (!v.trim()) {
-                                return
-                              }
-
-                              if (this.api.post) {
-                                return this.api
-                                  .post({
-                                    authorId: this.entry.author.id,
-                                    parentId: this.entry.id,
-                                    markdown: v
-                                  })
-                                  .then(({ entryId }) => {
-                                    this.children = [
-                                      {
-                                        id: entryId,
-                                        author: this.entry.author,
-                                        markdown: v,
-                                        isDeleted: false,
-                                        createdAt: new Date()
-                                      },
-                                      ...this.children
-                                    ]
-                                  })
-                              }
-
-                              this.children = [
-                                {
-                                  id: Math.random().toString(36).substr(2),
-                                  author: this.entry.author,
-                                  markdown: v,
-                                  isDeleted: false,
-                                  createdAt: new Date()
-                                },
-                                ...this.children
-                              ]
-                            })
-                          }
-
-                          this.isReply = !this.isReply
-                        }}
-                      >
-                        {this.isReply ? 'Post reply' : 'Reply'}
-                      </a>
-                    </span>
-                  )
-                }
-
-                if (!this.entry.isDeleted && isSameAsCurrentUser) {
-                  out.push(
-                    <span>
-                      <a
-                        role="button"
-                        onClick={() => {
-                          if (this.editor) {
-                            this.editor.getValue().then(async v => {
-                              if (this.api.update) {
-                                return this.api
-                                  .update({
-                                    entryId: this.entry.id,
-                                    markdown: v
-                                  })
-                                  .then(() => {
-                                    this.entry = {
-                                      ...this.entry,
-                                      markdown: v
-                                    }
-                                  })
-                              }
-
-                              this.entry = {
-                                ...this.entry,
-                                markdown: v
-                              }
-                            })
-                          }
-
-                          this.isEdit = !this.isEdit
-                        }}
-                      >
-                        {this.isEdit ? 'Save' : 'Edit'}
-                      </a>
-                    </span>,
-                    <span>
-                      <a
-                        role="button"
-                        onClick={() =>
-                          this.delete.emit({
-                            entryId: this.entry.id,
-                            hasChildren: !!this.children.length
-                          })
-                        }
-                      >
-                        Delete
-                      </a>
-                    </span>
-                  )
-                }
-
-                out.push(
-                  <span>{humanizeDurationToNow(this.entry.createdAt)}</span>
-                )
-
-                return out
-              })()}
-            </small>
+            {this.getSmallNav(false)}
           </div>
 
           {this.isReply ? (
@@ -414,7 +176,7 @@ export class AloudEntry {
                 entry={it}
                 api={this.api}
                 firebase={this.firebase}
-                limit={this.newSubEntriesAllowed}
+                limit={this.limit}
                 isSmallScreen={this.isSmallScreen}
                 totalSubEntriesLength={this.subEntriesLength}
                 countChangedListener={this.subEntryCountListener}
@@ -438,7 +200,11 @@ export class AloudEntry {
           )}
 
           {this.hasMore ? (
-            <button class="more" type="button" onClick={() => this.doLoad()}>
+            <button
+              class="more"
+              type="button"
+              onClick={() => this.doLoad(true)}
+            >
               Click for more
             </button>
           ) : null}
