@@ -3,6 +3,7 @@ import { EventEmitter } from '@stencil/core'
 import { IApi, IPost } from '../types'
 
 export interface EntryViewer {
+  url: string;
   api: IApi;
   entry?: IPost;
   children: IPost[];
@@ -26,6 +27,7 @@ export function initEntryViewer<T extends EntryViewer> (cls: T): void {
 
     cls.api
       .get({
+        url: cls.url,
         parentId: cls.entry ? cls.entry.id : null,
         after: cls.children[cls.children.length - 1]?.id,
         limit: cls.limit

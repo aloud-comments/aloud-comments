@@ -1,11 +1,25 @@
 import { Component, Host, Prop, State, h } from '@stencil/core'
-import { HTMLStencilElement } from '@stencil/core/internal'
+import { HTMLStencilElement, Watch } from '@stencil/core/internal'
 import firebaseui from 'firebaseui'
 
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
 import { IApi, IAuthor, IFirebaseConfig, IPost } from '../../types'
-import { randomAuthor, randomPost } from '../../utils/faker'
+import { FakeAPI } from '../../utils/faker'
 import { ShowdownParser } from '../../utils/parser'
+
+declare global {
+  interface Window {
+    /**
+     * ```html
+     * <script
+     *   src="https://cdnjs.cloudflare.com/ajax/libs/Faker/3.1.0/faker.min.js"
+     *   crossorigin="anonymous"
+     * ></script>
+     * ```
+     */
+    faker: typeof import('faker');
+  }
+}
 
 @Component({
   tag: 'aloud-comments',
@@ -16,8 +30,14 @@ export class AloudComments implements EntryViewer {
   /**
    * URL to be used for the database
    */
-  @Prop() url = location.href.replace(/#[^/].*$/, '').replace(/#\/$/, '');
+  @Prop() url = location.href
+    .replace(/#[^/].*$/, '')
+    .replace(/#\/$/, '')
+    .replace(/\/$/, '');
 
+  /**
+   * Color theme based on awsm.css
+   */
   @Prop({
     mutable: true,
     reflect: true
@@ -67,11 +87,11 @@ export class AloudComments implements EntryViewer {
     mutable: true,
     reflect: true
   })
-  api: IApi = {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    get: null as any
-  };
+  api!: IApi;
 
+  /**
+   * Custom markdown parser
+   */
   @Prop({
     mutable: true,
     reflect: true
@@ -136,131 +156,33 @@ export class AloudComments implements EntryViewer {
       this.isSmallScreen = evt.matches
     }
 
-    if (!this.debug) {
+    if (this.debug) {
+      this.api = this.api || {
+        get: async () => ({
+          result: [],
+          hasMore: false
+        })
+      };
+      (async () => {
+        window.faker = window.faker || (await import('faker'))
+        const api = new FakeAPI(['/', '#/spa1', '#/spa2'])
+        this.api = api
+        this.user = api.user
+      })()
+    } else {
       this.firebase = this.firebase || JSON.parse(this._firebase)
     }
 
     this.parser = this.parser || new ShowdownParser()
 
-    this.api.get
-      = this.api.get
-      || ((): IApi['get'] => {
-        const authors = {
-          collection: [] as IAuthor[],
-          new () {
-            const a = randomAuthor()
-            this.collection.push(a)
-            return a
-          },
-          random () {
-            return this.collection[
-              Math.floor(Math.random() * this.collection.length)
-            ]
-          }
-        }
+    this.doLoad(true)
+  }
 
-        this.user = authors.new()
-
-        Array(4)
-          .fill(null)
-          .map(() => authors.new())
-
-        const posts = {
-          collection: new Map<string, IPost>(),
-          children: new Map<string | null, IPost[]>(),
-          new (author: IAuthor, id: string, parent?: string): IPost {
-            parent = parent || null
-
-            const a: IPost = {
-              ...randomPost(
-                parent
-                  ? new Date(this.collection.get(parent).createdAt)
-                  : undefined
-              ),
-              id,
-              author
-            }
-
-            this.collection.set(a.id, a)
-
-            const children = this.children.get(parent) || []
-            children.push(a)
-            this.children.set(parent, children)
-
-            return a
-          }
-        }
-
-        const genPost = (
-          parents: number[] = [],
-          {
-            minItems = 1
-          }: {
-            minItems?: number;
-          } = {}
-        ): IPost[] => {
-          if (parents.length > 5) {
-            return []
-          }
-
-          let hasChildren = false
-
-          const out = Array(Math.floor(Math.random() ** 2 * 9) + minItems)
-            .fill(null)
-            .map((_, i) => {
-              const ps = [
-                posts.new(
-                  authors.random(),
-                  parents.map(j => j.toString()).join('') + i.toString(),
-                  parents.map(j => j.toString()).join('')
-                )
-              ]
-
-              if (Math.random() ** 2 > 0.5) {
-                hasChildren = true
-                return [...ps, ...genPost([...parents, i])]
-              }
-
-              return ps
-            })
-            .reduce((prev, c) => [...prev, ...c], [])
-
-          if (parents.length < 5 && !hasChildren) {
-            const i = 9
-            return [
-              ...out,
-              posts.new(
-                authors.random(),
-                parents.map(j => j.toString()).join('') + i.toString(),
-                parents.map(j => j.toString()).join('')
-              ),
-              ...genPost([...parents, i])
-            ]
-          }
-
-          return out
-        }
-
-        genPost([], { minItems: 3 })
-
-        return async ({ parentId, after, limit = this.maxChildrenAllowed }) => {
-          let out = (
-            posts.children.get(parentId || null) || []
-          ).sort((i1, i2) => (i1.createdAt < i2.createdAt ? 1 : -1))
-
-          const i = after ? out.map(({ id }) => id).indexOf(after) : -1
-          if (i !== -1) {
-            out = out.slice(i + 1)
-          }
-
-          return {
-            hasMore: out.length > limit,
-            result: out.slice(0, limit)
-          }
-        }
-      })()
-
-    this.doLoad(false)
+  @Watch('api')
+  @Watch('url')
+  onPropStateChanged (): void {
+    this.children = []
+    this.doLoad(true)
   }
 
   render (): HTMLStencilElement {
@@ -314,12 +236,15 @@ export class AloudComments implements EntryViewer {
                             if (this.api.post) {
                               return this.api
                                 .post({
+                                  url: this.url,
                                   authorId: this.user.id,
                                   markdown: v
                                 })
                                 .then(({ entryId }) => {
                                   this.children = [
                                     {
+                                      url: this.url,
+                                      parentId: null,
                                       id: entryId,
                                       author: this.user,
                                       markdown: v,
@@ -333,6 +258,8 @@ export class AloudComments implements EntryViewer {
 
                             this.children = [
                               {
+                                url: this.url,
+                                parentId: null,
                                 id: Math.random().toString(36).substr(2),
                                 author: this.user,
                                 markdown: v,
@@ -357,6 +284,7 @@ export class AloudComments implements EntryViewer {
 
           {this.children.map(it => (
             <aloud-entry
+              url={this.url}
               key={it.id}
               parser={this.parser}
               user={this.user}

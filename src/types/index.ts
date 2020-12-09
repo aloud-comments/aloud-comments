@@ -1,74 +1,37 @@
-import {
-  Boolean,
-  Constraint,
-  Literal,
-  Partial,
-  Record,
-  Static,
-  String,
-  Union,
-  Unknown
-} from 'runtypes'
+export interface IAuthor {
+  id: string;
+  name: string;
+  image: string;
+  gender?: 'male' | 'female';
+}
 
-export const tAuthor = Record({
-  id: String,
-  name: String,
-  image: String
-}).And(
-  Partial({
-    gender: Union(Literal('male'), Literal('female'))
-  })
-)
+export type IAuthorNormalized = IAuthor;
 
-export type IAuthor = Static<typeof tAuthor>;
+export type IReactionType = 'like' | 'dislike' | 'bookmark';
 
-export const ReactionTypes: Array<'like' | 'dislike' | 'bookmark'> = [
-  'like',
-  'dislike',
-  'bookmark'
-]
+export const ReactionTypes: IReactionType[] = ['like', 'dislike', 'bookmark']
 
-export const tReactionType = Union(
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  ...ReactionTypes.slice(1).map(r => Literal(r))
-)
+export interface IPost {
+  url: string;
+  id: string;
+  parentId: string | null;
+  author: IAuthor;
+  markdown: string;
+  createdAt: Date;
+  updatedAt?: Date;
+  isDeleted?: boolean;
+  reaction?: {
+    [t in IReactionType]: Set<string>;
+  };
+}
 
-export type IReactionType = Static<typeof tReactionType>;
-
-export const tDate = Unknown.withConstraint<Date>(
-  d => d instanceof Date && !isNaN(+d)
-)
-
-export const tSetString = Unknown.withConstraint<Set<string>>(
-  d => d instanceof Set && Array.from(d).every(v => typeof v === 'string')
-)
-
-export const tPost = Record({
-  id: String,
-  author: tAuthor,
-  markdown: String,
-  createdAt: tDate
-}).And(
-  Partial({
-    isDeleted: Boolean,
-    updatedAt: tDate,
-    reaction: Record<
-      {
-        [t in IReactionType]: Constraint<Unknown, Set<string>>;
-      }
-    >({
-      like: tSetString,
-      dislike: tSetString,
-      bookmark: tSetString
-    })
-  })
-)
-
-export type IPost = Static<typeof tPost>;
+export type IPostNormalized = Omit<IPost, 'author'> & {
+  authorId: string;
+};
 
 export interface IApi {
   get: (p: {
+    url: string;
     parentId: string | null;
     after?: string;
     limit?: number;
@@ -77,6 +40,7 @@ export interface IApi {
     hasMore: boolean;
   }>;
   post?: (p: {
+    url: string;
     authorId: string;
     parentId?: string;
     markdown: string;

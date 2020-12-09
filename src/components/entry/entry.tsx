@@ -29,6 +29,7 @@ import {
   scoped: true
 })
 export class AloudEntry implements EntryViewer, Entry {
+  @Prop() url!: string;
   @Prop() user?: IAuthor;
   @Prop({
     mutable: true
@@ -173,6 +174,7 @@ export class AloudEntry implements EntryViewer, Entry {
           {this.children.map(it =>
             this.depth > this.maxDepth ? (
               <aloud-subentry
+                url={this.url}
                 parser={this.parser}
                 user={this.user}
                 parent={this.entry.author}
@@ -191,6 +193,7 @@ export class AloudEntry implements EntryViewer, Entry {
               ></aloud-subentry>
             ) : (
               <aloud-entry
+                url={this.url}
                 parser={this.parser}
                 user={this.user}
                 entry={it}

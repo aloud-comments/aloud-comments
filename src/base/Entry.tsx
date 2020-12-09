@@ -4,6 +4,8 @@ import { IApi, IAuthor, IPost, IReactionType, ReactionTypes } from '../types'
 import { humanizeDurationToNow } from '../utils/humanize'
 
 export interface Entry {
+  url: string;
+
   user?: IAuthor;
   api: IApi;
   entry: IPost;
@@ -135,6 +137,7 @@ export function initEntry<T extends Entry> (cls: T): void {
                     if (cls.api.post) {
                       return cls.api
                         .post({
+                          url: this.url,
                           authorId: cls.entry.author.id,
                           parentId: cls.entry.id,
                           markdown: v
@@ -142,8 +145,10 @@ export function initEntry<T extends Entry> (cls: T): void {
                         .then(({ entryId }) => {
                           cls.children = [
                             {
+                              url: this.url,
                               id: entryId,
                               author: cls.entry.author,
+                              parentId: cls.entry.id,
                               markdown: v,
                               createdAt: new Date()
                             },
@@ -154,8 +159,10 @@ export function initEntry<T extends Entry> (cls: T): void {
 
                     cls.children = [
                       {
+                        url: this.url,
                         id: Math.random().toString(36).substr(2),
                         author: cls.entry.author,
+                        parentId: cls.entry.id,
                         markdown: v,
                         createdAt: new Date()
                       },

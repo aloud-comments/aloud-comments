@@ -30,6 +30,7 @@ import {
   scoped: true
 })
 export class AloudSubEntry implements EntryViewer, Entry {
+  @Prop() url!: string;
   @Prop() user?: IAuthor;
   @Prop() parent!: IAuthor;
   @Prop({
@@ -149,6 +150,7 @@ export class AloudSubEntry implements EntryViewer, Entry {
 
         {this.children.map(it => (
           <aloud-subentry
+            url={this.url}
             key={it.id}
             parser={this.parser}
             user={this.user}

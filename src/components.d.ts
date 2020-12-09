@@ -36,9 +36,15 @@ export namespace Components {
           * Number of children to load by default
          */
         "maxChildrenAllowed": number;
+        /**
+          * Custom markdown parser
+         */
         "parser": {
     parse: (md: string) => string;
   };
+        /**
+          * Color theme based on awsm.css
+         */
         "theme": string;
         /**
           * URL to be used for the database
@@ -67,6 +73,7 @@ export namespace Components {
         "parser": {
     parse: (md: string) => string;
   };
+        "url": string;
         "user"?: IAuthor;
     }
     interface AloudSubentry {
@@ -86,6 +93,7 @@ export namespace Components {
     parse: (md: string) => string;
   };
         "totalSubEntriesLength": number;
+        "url": string;
         "user"?: IAuthor;
     }
 }
@@ -130,7 +138,7 @@ declare namespace LocalJSX {
         /**
           * API configuration
          */
-        "api"?: IApi;
+        "api": IApi;
         /**
           * CodeMirror theme
          */
@@ -151,9 +159,15 @@ declare namespace LocalJSX {
           * Number of children to load by default
          */
         "maxChildrenAllowed"?: number;
+        /**
+          * Custom markdown parser
+         */
         "parser"?: {
     parse: (md: string) => string;
   };
+        /**
+          * Color theme based on awsm.css
+         */
         "theme"?: string;
         /**
           * URL to be used for the database
@@ -185,6 +199,7 @@ declare namespace LocalJSX {
         "parser": {
     parse: (md: string) => string;
   };
+        "url": string;
         "user"?: IAuthor;
     }
     interface AloudSubentry {
@@ -211,6 +226,7 @@ declare namespace LocalJSX {
     parse: (md: string) => string;
   };
         "totalSubEntriesLength": number;
+        "url": string;
         "user"?: IAuthor;
     }
     interface IntrinsicElements {

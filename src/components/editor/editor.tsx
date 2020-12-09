@@ -100,6 +100,22 @@ export class Editor {
   render (): HTMLStencilElement {
     return (
       <Host>
+        {this.theme && this.theme !== 'default'
+          ? [
+              // eslint-disable-next-line react/jsx-key
+              <base href="/" />,
+              // eslint-disable-next-line react/jsx-key
+              <link
+                rel="stylesheet"
+                href={
+                  this.theme.includes('://')
+                    ? this.theme
+                    : `https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.58.3/theme/${this.theme}.min.css`
+                }
+              />
+            ]
+          : null}
+
         <nav class="tabs is-right">
           <ul>
             <li class={this._isEdit ? 'is-active' : ''}>

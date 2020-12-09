@@ -10,7 +10,10 @@
   window.onhashchange = ev => {
     aloud.setAttribute(
       'url',
-      ev.newURL.replace(/#[^/].*$/, '').replace(/#\/$/, '')
+      ev.newURL
+        .replace(/#[^/].*$/, '')
+        .replace(/#\/$/, '')
+        .replace(/\/$/, '')
     )
   }
 })()
