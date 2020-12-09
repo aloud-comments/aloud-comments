@@ -16,8 +16,12 @@ export const config: Config = {
     },
     {
       type: 'www',
-      copy: [{ src: '../demo/js', dest: 'js' }],
-      serviceWorker: null // disable service workers
+      copy: [
+        { src: '../demo/js', dest: 'js' },
+        { src: 'root.html', dest: '../index.html' }
+      ],
+      serviceWorker: null, // disable service workers
+      baseUrl: 'https://aloud-comments.github.io/aloud-comments/'
     }
   ],
   plugins: [sass()]

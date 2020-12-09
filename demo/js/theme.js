@@ -9,10 +9,10 @@
   const colorSchemes = []
 
   document
-    .querySelectorAll('link[rel="stylesheet"][data-scheme]')
+    .querySelectorAll('link[rel="stylesheet"][data-theme]')
     .forEach(el => {
       colorSchemes.push({
-        scheme: el.getAttribute('data-scheme'),
+        scheme: el.getAttribute('data-theme'),
         href: el.getAttribute('href')
       })
     })
@@ -20,9 +20,9 @@
   let prefersColorScheme
     = localStorage.getItem('prefers-color-scheme')
     || (matchMedia('(prefers-color-scheme: dark)').matches
-      ? colorSchemes.find(el => el.scheme === 'dark')
-      : colorSchemes.find(el => el.scheme === 'light')
-    ).scheme
+      ? colorSchemes.find(el => el.scheme === 'black')
+      : colorSchemes.find(el => el.scheme === 'white')
+    )?.scheme
   localStorage.setItem('prefers-color-scheme', prefersColorScheme)
 
   /**
@@ -39,7 +39,7 @@
      * @type {HTMLLinkElement[]}
      */
     const linkTheme = Array.from(
-      document.querySelectorAll('link[rel="stylesheet"][data-scheme]')
+      document.querySelectorAll('link[rel="stylesheet"][data-theme]')
     )
 
     linkTheme.slice(1).map(el => el.remove())
@@ -68,7 +68,7 @@
   setMainTheme(prefersColorScheme)
   setAloudTheme(
     localStorage.getItem('aloud-theme')
-      || colorSchemes.find(el => el.scheme === prefersColorScheme)?.href
+      || colorSchemes.find(el => el.scheme === prefersColorScheme)?.scheme
   )
 
   /**
@@ -82,6 +82,8 @@
       i = 0
     }
 
-    setMainTheme(colorSchemes[i].scheme)
+    if (colorSchemes[i].scheme) {
+      setMainTheme(colorSchemes[i].scheme)
+    }
   }
 })()

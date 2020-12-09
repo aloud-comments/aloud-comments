@@ -14,7 +14,7 @@ export const ReactionTypes: IReactionType[] = ['like', 'dislike', 'bookmark']
 export interface IPost {
   url: string;
   id: string;
-  parentId: string | null;
+  parentId?: string;
   author: IAuthor;
   markdown: string;
   createdAt: Date;
@@ -26,6 +26,7 @@ export interface IPost {
 }
 
 export type IPostNormalized = Omit<IPost, 'author'> & {
+  parentId: string;
   authorId: string;
 };
 

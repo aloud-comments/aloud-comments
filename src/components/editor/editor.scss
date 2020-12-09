@@ -27,6 +27,10 @@
 .tabs {
   width: 100%;
   margin-bottom: 0.5rem !important;
+
+  a {
+    color: unset;
+  }
 }
 
 .CodeMirror {

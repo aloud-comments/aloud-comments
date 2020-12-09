@@ -12,13 +12,13 @@
     <link
       rel="stylesheet"
       href="https://unpkg.com/awsm.css/dist/awsm_theme_mischka.min.css"
-      data-scheme="dark"
+      data-theme="black"
       media="(prefers-color-scheme: dark)"
     />
 
     <link
       rel="stylesheet"
-      data-scheme="light"
+      data-theme="white"
       href="https://unpkg.com/awsm.css/dist/awsm_theme_pearl-lusta.min.css"
       media="(prefers-color-scheme: no-preference), (prefers-color-scheme: light)"
     />
@@ -97,7 +97,10 @@
       crossorigin="anonymous"
     ></script>
 
-    <script type="module" src="/build/aloud-comments.esm.js"></script>
-    <script nomodule src="/build/aloud-comments.js"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://unpkg.com/txtgen"></script>
+
+    <script type="module" src="./build/aloud-comments.esm.js"></script>
+    <script nomodule src="./build/aloud-comments.js"></script>
   </body>
 </html>

@@ -64,7 +64,7 @@ export class AloudEntry implements EntryViewer, Entry {
     }
   >();
 
-  readonly limit = 3;
+  readonly limit = 2;
 
   getReaction: (r: IReactionType) => Set<string>;
   setReaction: (r: IReactionType) => Promise<void>;

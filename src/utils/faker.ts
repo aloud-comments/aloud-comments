@@ -1,14 +1,43 @@
+import _Dexie from 'dexie'
+
 import { IApi, IAuthor, IAuthorNormalized, IPostNormalized } from '../types'
 
+const Dexie = window.Dexie || _Dexie
+
+class FakeAPIDatabase extends Dexie {
+  public authors: Dexie.Table<IAuthorNormalized, string>;
+  public posts: Dexie.Table<IPostNormalized, string>;
+
+  constructor () {
+    super('aloud-comments')
+    this.version(1).stores({
+      authors: 'id',
+      posts: 'id, [parentId+url], url, createdAt'
+    })
+    this.authors = this.table('authors')
+    this.posts = this.table('posts')
+  }
+}
+
 export class FakeAPI implements IApi {
-  user: IAuthor;
+  private authors: IAuthor[] = [];
 
-  private authors = new Map<string, IAuthorNormalized>();
-  private posts = new Map<string, IPostNormalized>();
+  private db = new FakeAPIDatabase();
 
-  constructor (public urls: string[], user?: IAuthor) {
-    this.user = user || this.randomAuthor()
+  get user (): IAuthor {
+    return this.authors[0]
+  }
 
+  static async create (urls: string[]): Promise<FakeAPI> {
+    const out = new this(urls)
+    await out.init()
+    return out
+  }
+
+  /**
+   * !_This constructor is not async'ly initialized._
+   */
+  private constructor (public urls: string[]) {
     const cleanURL = (u: string) =>
       u
         .replace(/#[^/].*$/, '')
@@ -32,48 +61,37 @@ export class FakeAPI implements IApi {
     if (!this.urls.includes(currentURL)) {
       this.urls.push(currentURL)
     }
-
-    Array(10)
-      .fill(null)
-      .map(() => this.randomAuthor())
-
-    this.urls.map(u => this.genPost(u, [], { minItems: 3 }))
-
-    console.log(this.authors, this.posts)
   }
 
-  /**
-   * @type {IApi['get']}
-   */
-  async get ({
-    url,
-    parentId,
-    after,
-    limit = 3
-  }: Parameters<IApi['get']>[0]): ReturnType<IApi['get']> {
-    let out = Array.from(this.posts.values())
-      .filter(
-        el =>
-          (parentId ? el.parentId === parentId : !el.parentId)
-          && el.url === url
+  private async init (): Promise<void> {
+    this.authors = await this.db.authors.filter(() => true).toArray()
+
+    if (this.authors.length < 10) {
+      this.authors = await Promise.all(
+        Array(10 - this.authors.length)
+          .fill(null)
+          .map(() => this.randomAuthor())
       )
-      .sort((i1, i2) => (i1.createdAt < i2.createdAt ? 1 : -1))
-
-    const i = after ? out.map(({ id }) => id).indexOf(after) : -1
-    if (i !== -1) {
-      out = out.slice(i + 1)
     }
 
-    return {
-      hasMore: out.length > limit,
-      result: out.slice(0, limit).map(({ authorId, ...a }) => ({
-        ...a,
-        author: this.authors.get(authorId)
-      }))
-    }
+    await Promise.all(
+      this.urls.map(u =>
+        this.db.posts
+          .where({
+            url: u
+          })
+          .count()
+          .then(async c => {
+            if (!c) {
+              return this.genPost(u, [], { minItems: 3 })
+            }
+            return c
+          })
+      )
+    )
   }
 
-  private genPost (
+  private async genPost (
     url: string,
     parents: number[] = [],
     {
@@ -81,54 +99,57 @@ export class FakeAPI implements IApi {
     }: {
       minItems?: number;
     } = {}
-  ): IPostNormalized[] {
+  ): Promise<IPostNormalized[]> {
     if (parents.length > 5) {
       return []
     }
 
     let hasChildren = false
 
-    let out = Array(Math.floor(Math.random() ** 2 * 9) + minItems)
-      .fill(null)
-      .map((_, i) => {
-        const ps = [
-          this.randomPost(
-            url,
-            url + '--' + [...parents, i].map(j => j.toString()).join(''),
-            parents.length
-              ? url + '--' + parents.map(j => j.toString()).join('')
-              : null
-          )
-        ]
+    let out: IPostNormalized[] = (
+      await Promise.all(
+        Array(Math.floor(Math.random() ** 2 * 9) + minItems)
+          .fill(null)
+          .map(async (_, i) => {
+            const ps = [
+              await this.randomPost(
+                url,
+                url + '--' + [...parents, i].map(j => j.toString()).join(''),
+                parents.length
+                  ? url + '--' + parents.map(j => j.toString()).join('')
+                  : null
+              )
+            ]
 
-        if (Math.random() ** 2 > 0.5) {
-          hasChildren = true
-          return [...ps, ...this.genPost(url, [...parents, i])]
-        }
+            if (Math.random() ** 2 > 0.5) {
+              hasChildren = true
+              return [...ps, ...(await this.genPost(url, [...parents, i]))]
+            }
 
-        return ps
-      })
-      .reduce((prev, c) => [...prev, ...c], [])
+            return ps
+          })
+      )
+    ).reduce((prev, c) => [...prev, ...c], [])
 
     if (parents.length < 5 && !hasChildren) {
       const i = 9
       out = [
         ...out,
-        this.randomPost(
+        await this.randomPost(
           url,
           url + '--' + [...parents, i].map(j => j.toString()).join(''),
           parents.length
             ? url + '--' + parents.map(j => j.toString()).join('')
             : null
         ),
-        ...this.genPost(url, [...parents, i])
+        ...(await this.genPost(url, [...parents, i]))
       ]
     }
 
     return out
   }
 
-  private randomAuthor (): IAuthor {
+  private async randomAuthor (): Promise<IAuthor> {
     const gender = Math.random() > 0.5 ? 'female' : 'male'
     const out: IAuthor = {
       id: Math.random().toString(36).substr(2),
@@ -139,32 +160,38 @@ export class FakeAPI implements IApi {
       gender
     }
 
-    this.authors.set(out.id, out)
+    this.db.authors.add(out)
 
     return out
   }
 
-  private randomPost (
+  private async randomPost (
     url: string,
     id = Math.random().toString(36).substr(2),
     parentId?: string | null
-  ): IPostNormalized {
-    parentId = parentId || null
+  ): Promise<IPostNormalized> {
+    parentId = parentId || ''
     const parent = parentId
-      ? (this.posts.get(parentId) as IPostNormalized | null)
+      ? await this.db.posts
+          .where({
+            id: parentId
+          })
+          .first()
       : null
     if (!parent) {
-      parentId = null
+      parentId = ''
     }
 
     const out: IPostNormalized = {
       url,
       parentId,
       id,
-      authorId: Array.from(this.authors.values())[
-        Math.floor(Math.random() * this.authors.size)
-      ].id,
-      markdown: window.faker.lorem.paragraphs(Math.random() * 2, '\n\n'),
+      authorId: this.authors[Math.floor(Math.random() * this.authors.length)]
+        .id,
+      markdown: Array(Math.floor(Math.random() ** 1.5 * 3) + 1)
+        .fill(null)
+        .map(() => window.txtgen.paragraph(Math.floor(Math.random() * 3) + 1))
+        .join('\n\n'),
       createdAt: parent
         ? window.faker.date.between(parent.createdAt, new Date())
         : this.randomDate(),
@@ -187,7 +214,7 @@ export class FakeAPI implements IApi {
       }
     }
 
-    this.posts.set(out.id, out)
+    await this.db.posts.add(out)
 
     return out
   }
@@ -218,5 +245,44 @@ export class FakeAPI implements IApi {
       new Date(+now - 1000 * 60 * 60 * 24 * 365),
       now
     ) // within a years
+  }
+
+  /**
+   * @type {IApi['get']}
+   */
+  public async get ({
+    url,
+    parentId,
+    after,
+    limit = 3
+  }: Parameters<IApi['get']>[0]): ReturnType<IApi['get']> {
+    parentId = parentId || ''
+
+    let out = await this.db.posts
+      .where({
+        parentId,
+        url
+      })
+      .reverse()
+      .sortBy('createdAt')
+
+    const i = after ? out.map(({ id }) => id).indexOf(after) : -1
+    if (i !== -1) {
+      out = out.slice(i + 1)
+    }
+
+    return {
+      hasMore: out.length > limit,
+      result: await Promise.all(
+        out.slice(0, limit).map(async ({ authorId, ...a }) => ({
+          ...a,
+          author: await this.db.authors
+            .where({
+              id: authorId
+            })
+            .first()
+        }))
+      )
+    }
   }
 }

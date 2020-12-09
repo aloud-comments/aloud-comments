@@ -9,6 +9,8 @@ import { ShowdownParser } from '../../utils/parser'
 
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    exports: {};
     /**
      * ```html
      * <script
@@ -18,8 +20,22 @@ declare global {
      * ```
      */
     faker: typeof import('faker');
+    /**
+     * ```html
+     * <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+     * ```
+     */
+    Dexie: typeof import('dexie') & import('dexie').DexieConstructor;
+    /**
+     * ```html
+     * <script src="https://unpkg.com/txtgen"></script>
+     * ```
+     */
+    txtgen: typeof import('txtgen');
   }
 }
+
+window.exports = window.exports || {}
 
 @Component({
   tag: 'aloud-comments',
@@ -164,8 +180,16 @@ export class AloudComments implements EntryViewer {
         })
       };
       (async () => {
-        window.faker = window.faker || (await import('faker'))
-        const api = new FakeAPI(['/', '#/spa1', '#/spa2'])
+        /**
+         * These are required.
+         *
+         * ```js
+         * window.faker
+         * window.Dexie
+         * window.txtgen
+         * ```
+         */
+        const api = await FakeAPI.create(['/', '#/spa1', '#/spa2'])
         this.api = api
         this.user = api.user
       })()
