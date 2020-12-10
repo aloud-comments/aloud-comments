@@ -1,6 +1,6 @@
 {
   "name": "aloud-comments",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Web Component commenting engine based on Firebase (and shadow DOM)",
   "repository": "github:aloud-comments/aloud-comments",
   "license": "MIT",
@@ -75,7 +75,7 @@
   "es2015": "dist/esm/index.mjs",
   "es2017": "dist/esm/index.mjs",
   "importSort": {
-    ".ts,.tsx": {
+    ".ts, .tsx, .config.ts": {
       "parser": "typescript",
       "style": "module"
     }

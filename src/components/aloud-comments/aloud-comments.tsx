@@ -1,16 +1,18 @@
-import { Component, Host, Prop, State, h } from '@stencil/core'
+import { Component, Element, Prop, State, h } from '@stencil/core'
 import { HTMLStencilElement, Watch } from '@stencil/core/internal'
 import firebaseui from 'firebaseui'
 
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
 import { IApi, IAuthor, IFirebaseConfig, IPost } from '../../types'
+import { isBgDark } from '../../utils/color'
 import { FakeAPI } from '../../utils/faker'
 import { ShowdownParser } from '../../utils/parser'
 
 declare global {
+  /**
+   * Only append to window Object in Debug mode.
+   */
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    exports: {};
     /**
      * ```html
      * <script
@@ -32,10 +34,12 @@ declare global {
      * ```
      */
     txtgen: typeof import('txtgen');
+    /**
+     * Only attached to window in Debug mode.
+     */
+    isBgDark: (bgColor?: string) => boolean;
   }
 }
-
-window.exports = window.exports || {}
 
 @Component({
   tag: 'aloud-comments',
@@ -50,17 +54,6 @@ export class AloudComments implements EntryViewer {
     .replace(/#[^/].*$/, '')
     .replace(/#\/$/, '')
     .replace(/\/$/, '');
-
-  /**
-   * Color theme based on awsm.css
-   */
-  @Prop({
-    mutable: true,
-    reflect: true
-  })
-  theme = matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'black'
-    : 'white';
 
   /**
    * CodeMirror theme
@@ -128,10 +121,17 @@ export class AloudComments implements EntryViewer {
    */
   @Prop() debug = false;
 
+  /**
+   * Allows theme to be set and updated
+   */
+  @Prop() theme?: 'dark' | 'light';
+
   @State() user?: IAuthor;
   @State() children: IPost[] = [];
   @State() hasMore = true;
   @State() isSmallScreen = false;
+
+  @Element() $el: HTMLElement;
 
   mainEditor: HTMLAloudEditorElement;
 
@@ -140,16 +140,6 @@ export class AloudComments implements EntryViewer {
 
   get limit (): number {
     return this.maxChildrenAllowed
-  }
-
-  get themeUrl (): string {
-    if (this.theme.includes('://')) {
-      return this.theme
-    }
-
-    return `https://unpkg.com/awsm.css/dist/awsm${
-      this.theme ? `_theme_${this.theme}` : ''
-    }.min.css`
   }
 
   constructor () {
@@ -188,7 +178,15 @@ export class AloudComments implements EntryViewer {
          * window.Dexie
          * window.txtgen
          * ```
+         *
+         * And, this will be generated.
+         *
+         * ```js
+         * window.isBgDark
+         * ```
          */
+        window.isBgDark = isBgDark
+
         const api = await FakeAPI.create(['/', '#/spa1', '#/spa2'])
         this.api = api
         this.user = api.user
@@ -202,6 +200,18 @@ export class AloudComments implements EntryViewer {
     this.doLoad(true)
   }
 
+  @Watch('theme')
+  onThemeChanged (): void {
+    if (!(this.theme === 'dark' || this.theme === 'light')) {
+      this.theme = isBgDark() ? 'dark' : 'light'
+    }
+
+    this.$el.style.setProperty('--c-bg', `var(--c-${this.theme}-bg)`)
+    this.$el.style.setProperty('--c-font', `var(--c-${this.theme}-font)`)
+    this.$el.style.setProperty('--c-link', `var(--c-${this.theme}-link)`)
+    this.$el.style.setProperty('--c-button', `var(--c-${this.theme}-button)`)
+  }
+
   @Watch('api')
   @Watch('url')
   onPropStateChanged (): void {
@@ -211,128 +221,119 @@ export class AloudComments implements EntryViewer {
 
   render (): HTMLStencilElement {
     return (
-      <Host>
-        <base href="/" />
-        <link rel="stylesheet" href={this.themeUrl} />
-
-        <html class="hide-scrollbar">
-          <article class="media mb-4">
-            <figure class="media-left">
-              <p class="image is-64x64">
-                {this.user ? (
-                  <img
-                    src={this.user.image}
-                    alt={this.user.name}
-                    title={this.user.name}
-                  />
-                ) : (
-                  <img src="https://www.gravatar.com/avatar?d=mp" />
-                )}
+      <main>
+        <article class="media mb-4">
+          <figure class="media-left">
+            <p class="image is-64x64">
+              {this.user ? (
+                <img
+                  src={this.user.image}
+                  alt={this.user.name}
+                  title={this.user.name}
+                />
+              ) : (
+                <img src="https://www.gravatar.com/avatar?d=mp" />
+              )}
+            </p>
+          </figure>
+          <div class="media-content">
+            <div class="field">
+              <p class="control">
+                <aloud-editor
+                  parser={this.parser}
+                  firebase={this.firebase}
+                  theme={this.cmTheme}
+                  ref={el => {
+                    this.mainEditor = el
+                  }}
+                />
               </p>
-            </figure>
-            <div class="media-content">
-              <div class="field">
-                <p class="control">
-                  <aloud-editor
-                    parser={this.parser}
-                    firebase={this.firebase}
-                    theme={this.cmTheme}
-                    ref={el => {
-                      this.mainEditor = el
-                    }}
-                  />
-                </p>
-              </div>
-              <nav class="level">
-                <div class="level-left">
-                  <div class="level-item">
-                    <button
-                      class="button is-info"
-                      type="button"
-                      onClick={() => {
-                        this.mainEditor
-                          .getValue()
-                          .then(async v => {
-                            if (!this.user) {
-                              return
-                            }
-
-                            if (this.api.post) {
-                              return this.api
-                                .post({
-                                  url: this.url,
-                                  authorId: this.user.id,
-                                  markdown: v
-                                })
-                                .then(({ entryId }) => {
-                                  this.children = [
-                                    {
-                                      url: this.url,
-                                      parentId: null,
-                                      id: entryId,
-                                      author: this.user,
-                                      markdown: v,
-                                      isDeleted: false,
-                                      createdAt: new Date()
-                                    },
-                                    ...this.children
-                                  ]
-                                })
-                            }
-
-                            this.children = [
-                              {
-                                url: this.url,
-                                parentId: null,
-                                id: Math.random().toString(36).substr(2),
-                                author: this.user,
-                                markdown: v,
-                                isDeleted: false,
-                                createdAt: new Date()
-                              },
-                              ...this.children
-                            ]
-                          })
-                          .finally(() => {
-                            this.mainEditor.value = ''
-                          })
-                      }}
-                    >
-                      Submit
-                    </button>
-                  </div>
-                </div>
-              </nav>
             </div>
-          </article>
+            <nav class="level">
+              <div class="level-left">
+                <div class="level-item">
+                  <button
+                    class="button is-info"
+                    type="button"
+                    onClick={() => {
+                      this.mainEditor
+                        .getValue()
+                        .then(async v => {
+                          if (!this.user) {
+                            return
+                          }
 
-          {this.children.map(it => (
-            <aloud-entry
-              url={this.url}
-              key={it.id}
-              parser={this.parser}
-              user={this.user}
-              entry={it}
-              api={this.api}
-              firebase={this.firebase}
-              isSmallScreen={this.isSmallScreen}
-              depth={1}
-              cmTheme={this.cmTheme}
-              onDelete={evt => this.doDelete(evt.detail)}
-            ></aloud-entry>
-          ))}
+                          if (this.api.post) {
+                            return this.api
+                              .post({
+                                url: this.url,
+                                authorId: this.user.id,
+                                markdown: v
+                              })
+                              .then(({ entryId }) => {
+                                this.children = [
+                                  {
+                                    url: this.url,
+                                    parentId: null,
+                                    id: entryId,
+                                    author: this.user,
+                                    markdown: v,
+                                    isDeleted: false,
+                                    createdAt: new Date()
+                                  },
+                                  ...this.children
+                                ]
+                              })
+                          }
 
-          {this.hasMore ? (
-            <button
-              class="more"
-              type="button"
-              onClick={() => this.doLoad(true)}
-            >
-              Click for more
-            </button>
-          ) : null}
-        </html>
-      </Host>
+                          this.children = [
+                            {
+                              url: this.url,
+                              parentId: null,
+                              id: Math.random().toString(36).substr(2),
+                              author: this.user,
+                              markdown: v,
+                              isDeleted: false,
+                              createdAt: new Date()
+                            },
+                            ...this.children
+                          ]
+                        })
+                        .finally(() => {
+                          this.mainEditor.value = ''
+                        })
+                    }}
+                  >
+                    Submit
+                  </button>
+                </div>
+              </div>
+            </nav>
+          </div>
+        </article>
+
+        {this.children.map(it => (
+          <aloud-entry
+            url={this.url}
+            key={it.id}
+            parser={this.parser}
+            user={this.user}
+            entry={it}
+            api={this.api}
+            firebase={this.firebase}
+            isSmallScreen={this.isSmallScreen}
+            depth={1}
+            cmTheme={this.cmTheme}
+            onDelete={evt => this.doDelete(evt.detail)}
+          ></aloud-entry>
+        ))}
+
+        {this.hasMore ? (
+          <button class="more" type="button" onClick={() => this.doLoad(true)}>
+            Click for more
+          </button>
+        ) : null}
+      </main>
     )
   }
 }

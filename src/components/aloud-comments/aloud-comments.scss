@@ -1,15 +1,112 @@
 @import '~bulma/css/bulma.css';
 @import '~firebaseui/dist/firebaseui.css';
 
-html {
-  display: block;
-  min-width: var(--min-width, 360px);
-  max-width: var(--max-width, 800px);
-  padding: 1rem;
+:host {
+  --min-width: 40vw;
+  --width: 600px;
+  --max-width: 800px;
 
-  * {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  // Light theme
+  --c-light-bg: #f8faef;
+  --c-light-font: #1c1622;
+  --c-light-link: #0a0ad6;
+  --c-light-button: #e5edc5;
+
+  // Dark theme
+  --c-dark-bg: #393d3f;
+  --c-dark-font: #fafbf9;
+  --c-dark-link: #96bcda;
+  --c-dark-button: #555b5e;
+
+  // Light first
+  --c-bg: var(--c-light-bg);
+  --c-font: var(--c-light-font);
+  --c-link: var(--c-light-link);
+  --c-button: var(--c-light-button);
+
+  @media (prefers-color-scheme: dark) {
+    --c-bg: var(--c-dark-bg);
+    --c-font: var(--c-dark-font);
+    --c-link: var(--c-dark-link);
+    --c-button: var(--c-dark-button);
   }
+}
+
+* {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--c-font);
+}
+
+main {
+  background-color: var(--c-bg);
+}
+
+a {
+  color: var(--c-link);
+}
+
+button {
+  background-color: var(--c-button);
+  max-height: 1.5em;
+}
+
+// Fix Bulma styles
+.content :not(a) {
+  color: var(--c-font);
+}
+
+.dark {
+  * {
+    color: var(--c-dark-font);
+  }
+
+  main {
+    background-color: var(--c-dark-bg);
+  }
+
+  a {
+    color: var(--c-dark-link);
+  }
+
+  button {
+    background-color: var(--c-dark-button);
+  }
+
+  // Fix Bulma styles
+  .content :not(a) {
+    color: var(--c-dark-font);
+  }
+}
+
+.light {
+  * {
+    color: var(--c-light-font);
+  }
+
+  main {
+    background-color: var(--c-light-bg);
+  }
+
+  a {
+    color: var(--c-light-link);
+  }
+
+  button {
+    background-color: var(--c-light-button);
+  }
+
+  // Fix Bulma styles
+  .content :not(a) {
+    color: var(--c-light-font);
+  }
+}
+
+main {
+  display: block;
+  min-width: var(--min-width);
+  width: var(--width);
+  max-width: var(--max-width);
+  padding: 1rem;
 }
 
 p {
@@ -63,6 +160,9 @@ small {
 
   &.dot-separated {
     > span {
+      display: inline-block;
+      background-color: transparent;
+
       & + span::before {
         content: ' · ';
       }
@@ -77,9 +177,4 @@ small {
       }
     }
   }
-}
-
-// Fix Bulma styles
-.content :not(a) {
-  color: unset !important;
 }

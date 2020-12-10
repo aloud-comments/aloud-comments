@@ -1,6 +1,6 @@
 import { EventEmitter, getAssetPath, h } from '@stencil/core'
-
 import { IApi, IAuthor, IPost, IReactionType, ReactionTypes } from '../types'
+
 import { humanizeDurationToNow } from '../utils/humanize'
 
 export interface Entry {
@@ -83,7 +83,7 @@ export function initEntry<T extends Entry> (cls: T): void {
 
     if (!cls.entry.isDeleted && cls.user) {
       out.push(
-        <span>
+        <span class="reaction">
           <a
             role="button"
             title="Like"
@@ -96,7 +96,7 @@ export function initEntry<T extends Entry> (cls: T): void {
             ) : null}
           </a>
         </span>,
-        <span>
+        <span class="reaction">
           <a
             role="button"
             title="Dislike"
@@ -109,7 +109,7 @@ export function initEntry<T extends Entry> (cls: T): void {
             ) : null}
           </a>
         </span>,
-        <span>
+        <span class="reaction">
           <a
             role="button"
             title="Bookmark"

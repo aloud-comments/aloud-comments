@@ -43,9 +43,9 @@ export namespace Components {
     parse: (md: string) => string;
   };
         /**
-          * Color theme based on awsm.css
+          * Allows theme to be set and updated
          */
-        "theme": string;
+        "theme"?: 'dark' | 'light';
         /**
           * URL to be used for the database
          */
@@ -166,9 +166,9 @@ declare namespace LocalJSX {
     parse: (md: string) => string;
   };
         /**
-          * Color theme based on awsm.css
+          * Allows theme to be set and updated
          */
-        "theme"?: string;
+        "theme"?: 'dark' | 'light';
         /**
           * URL to be used for the database
          */

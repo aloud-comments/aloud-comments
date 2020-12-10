@@ -2,27 +2,66 @@
 
 (function () {
   const aloud = document.querySelector('aloud-comments')
+  /**
+   * @type {number}
+   */
+  let setAloudTimer
 
   /**
-   * @type {{ scheme: string; href: string; }[]}
+   *
+   * @param {string} t
    */
-  const colorSchemes = []
+  function setAloudTheme (t) {
+    window.clearTimeout(setAloudTimer)
 
-  document
-    .querySelectorAll('link[rel="stylesheet"][data-theme]')
-    .forEach(el => {
-      colorSchemes.push({
-        scheme: el.getAttribute('data-theme'),
-        href: el.getAttribute('href')
-      })
-    })
+    // @ts-ignore
+    if (!window.isBgDark) {
+      setAloudTimer = window.setTimeout(() => {
+        setAloudTheme(t)
+      }, 50)
 
-  let prefersColorScheme
-    = localStorage.getItem('prefers-color-scheme')
-    || (matchMedia('(prefers-color-scheme: dark)').matches
-      ? colorSchemes.find(el => el.scheme === 'black')
-      : colorSchemes.find(el => el.scheme === 'white')
-    )?.scheme
+      return
+    }
+
+    const darkMap = {
+      white: false,
+      gondola: true,
+      mischka: false,
+      'big-stone': true,
+      black: true,
+      tasman: false,
+      'pastel-pink': false,
+      'pearl-lusta': false
+    }
+
+    // @ts-ignore
+    if (typeof darkMap[t] === 'undefined' ? isBgDark() : darkMap[t]) {
+      console.log(t, 'Changing to dark')
+      aloud.setAttribute('theme', 'dark')
+    } else {
+      console.log(t, 'Changing to light')
+      aloud.setAttribute('theme', 'light')
+    }
+  }
+
+  /**
+   * @type {HTMLLinkElement[]}
+   */
+  const themeElements = Array.from(
+    document.querySelectorAll('link[rel="stylesheet"][data-theme]')
+  )
+
+  let prefersColorScheme = localStorage.getItem('prefers-color-scheme')
+
+  if (!prefersColorScheme) {
+    const themeEl = matchMedia('(prefers-color-scheme: dark)').matches
+      ? themeElements.find(el => el.getAttribute('data-theme') === 'black')
+      : themeElements.find(el => el.getAttribute('data-theme') === 'white')
+    if (themeEl) {
+      prefersColorScheme = themeEl.getAttribute('data-theme')
+    }
+  }
+
   localStorage.setItem('prefers-color-scheme', prefersColorScheme)
 
   /**
@@ -35,41 +74,33 @@
    * @param {string} t
    */
   const setMainTheme = t => {
-    /**
-     * @type {HTMLLinkElement[]}
-     */
-    const linkTheme = Array.from(
-      document.querySelectorAll('link[rel="stylesheet"][data-theme]')
-    )
+    sel.value = t
 
-    linkTheme.slice(1).map(el => el.remove())
-    linkTheme[0].media = ''
-    linkTheme[0].href
-      = colorSchemes.find(el => el.scheme === t)?.href || linkTheme[0].href
+    let themeEl = themeElements.find(el => el.media === '')
+
+    if (!themeEl) {
+      themeEl = /** @type {HTMLLinkElement} */ (themeElements[0].cloneNode())
+      themeEl.removeAttribute('media')
+      themeEl.removeAttribute('data-theme')
+
+      document.head.append(themeEl)
+
+      themeElements.push(themeEl)
+    }
+
+    themeEl.href = `https://unpkg.com/awsm.css/dist/awsm_theme_${t}.min.css`
 
     prefersColorScheme = t
     localStorage.setItem('prefers-color-scheme', t)
-  }
 
-  /**
-   *
-   * @param {string} t
-   */
-  const setAloudTheme = t => {
-    sel.value = t
-    localStorage.setItem('aloud-theme', t)
-    aloud.setAttribute('theme', t)
+    setAloudTheme(t)
   }
 
   sel.onchange = () => {
-    setAloudTheme(sel.value)
+    setMainTheme(sel.value)
   }
 
   setMainTheme(prefersColorScheme)
-  setAloudTheme(
-    localStorage.getItem('aloud-theme')
-      || colorSchemes.find(el => el.scheme === prefersColorScheme)?.scheme
-  )
 
   /**
    * @type {HTMLButtonElement}
@@ -77,13 +108,11 @@
   const toggleEl = document.querySelector('button.scheme-toggle')
 
   toggleEl.onclick = () => {
-    let i = colorSchemes.findIndex(el => el.scheme === prefersColorScheme) + 1
-    if (i >= colorSchemes.length) {
-      i = 0
-    }
-
-    if (colorSchemes[i].scheme) {
-      setMainTheme(colorSchemes[i].scheme)
+    // @ts-ignore
+    if (isBgDark()) {
+      setMainTheme('white')
+    } else {
+      setMainTheme('black')
     }
   }
 })()

@@ -1,5 +1,11 @@
+import { execSync } from 'child_process'
+
 import { Config } from '@stencil/core'
 import { sass } from '@stencil/sass'
+
+execSync(/* shell */ `
+cp -r www/aloud-comments/js ./demo
+`)
 
 export const config: Config = {
   namespace: 'aloud-comments',
@@ -18,7 +24,7 @@ export const config: Config = {
       type: 'www',
       copy: [
         { src: '../demo/js', dest: 'js' },
-        { src: 'root.html', dest: '../index.html' }
+        { src: '../demo/root.html', dest: '../index.html' }
       ],
       serviceWorker: null, // disable service workers
       baseUrl: 'https://aloud-comments.github.io/aloud-comments/'

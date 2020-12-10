@@ -2,3 +2,4 @@
 /loader/
 node_modules/
 /www/
+*.js

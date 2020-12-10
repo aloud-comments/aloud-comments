@@ -1,10 +1,6 @@
-import _Dexie from 'dexie'
-
 import { IApi, IAuthor, IAuthorNormalized, IPostNormalized } from '../types'
 
-const Dexie = window.Dexie || _Dexie
-
-class FakeAPIDatabase extends Dexie {
+class FakeAPIDatabase extends window.Dexie {
   public authors: Dexie.Table<IAuthorNormalized, string>;
   public posts: Dexie.Table<IPostNormalized, string>;
 
@@ -186,8 +182,9 @@ export class FakeAPI implements IApi {
       url,
       parentId,
       id,
-      authorId: this.authors[Math.floor(Math.random() * this.authors.length)]
-        .id,
+      authorId: this.authors[
+        Math.floor(Math.random() ** 1.5 * this.authors.length)
+      ].id,
       markdown: Array(Math.floor(Math.random() ** 1.5 * 3) + 1)
         .fill(null)
         .map(() => window.txtgen.paragraph(Math.floor(Math.random() * 3) + 1))
@@ -202,7 +199,7 @@ export class FakeAPI implements IApi {
             .map(() => Math.random().toString(36).substr(2))
         ),
         dislike: new Set(
-          Array(Math.floor(Math.random() ** 2 * 3))
+          Array(Math.floor(Math.random() ** 3 * 5))
             .fill(null)
             .map(() => Math.random().toString(36).substr(2))
         ),
