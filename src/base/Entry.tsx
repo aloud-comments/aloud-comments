@@ -1,6 +1,6 @@
 import { EventEmitter, getAssetPath, h } from '@stencil/core'
-import { IApi, IAuthor, IPost, IReactionType, ReactionTypes } from '../types'
 
+import { IApi, IAuthor, IPost, IReactionType, ReactionTypes } from '../types'
 import { humanizeDurationToNow } from '../utils/humanize'
 
 export interface Entry {
@@ -90,7 +90,15 @@ export function initEntry<T extends Entry> (cls: T): void {
             class={cls.getReaction('like').has(cls.user.id) ? 'active' : ''}
             onClick={() => cls.setReaction('like')}
           >
-            <img class="icon" src={getAssetPath('../assets/heart.svg')} />
+            <img
+              class="icon"
+              src={getAssetPath('../assets/heart.svg')}
+              onError={ev => {
+                (ev.target as HTMLImageElement).src = getAssetPath(
+                  '../collection/assets/heart.svg'
+                )
+              }}
+            />
             {cls.getReaction('like').size ? (
               <span>{cls.getReaction('like').size}</span>
             ) : null}
@@ -103,7 +111,15 @@ export function initEntry<T extends Entry> (cls: T): void {
             class={cls.getReaction('dislike').has(cls.user.id) ? 'active' : ''}
             onClick={() => cls.setReaction('dislike')}
           >
-            <img class="icon" src={getAssetPath('../assets/dislike.svg')} />
+            <img
+              class="icon"
+              src={getAssetPath('../assets/dislike.svg')}
+              onError={ev => {
+                (ev.target as HTMLImageElement).src = getAssetPath(
+                  '../collection/assets/dislike.svg'
+                )
+              }}
+            />
             {cls.getReaction('dislike').size ? (
               <span>{cls.getReaction('dislike').size}</span>
             ) : null}
@@ -116,7 +132,15 @@ export function initEntry<T extends Entry> (cls: T): void {
             class={cls.getReaction('bookmark').has(cls.user.id) ? 'active' : ''}
             onClick={() => cls.setReaction('bookmark')}
           >
-            <img class="icon" src={getAssetPath('../assets/bookmark.svg')} />
+            <img
+              class="icon"
+              src={getAssetPath('../assets/bookmark.svg')}
+              onError={ev => {
+                (ev.target as HTMLImageElement).src = getAssetPath(
+                  '../collection/assets/bookmark.svg'
+                )
+              }}
+            />
             {cls.getReaction('bookmark').size ? (
               <span>{cls.getReaction('bookmark').size}</span>
             ) : null}

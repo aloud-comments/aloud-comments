@@ -25,7 +25,7 @@ import {
 @Component({
   tag: 'aloud-entry',
   styleUrl: 'entry.scss',
-  assetsDirs: ['../assets'],
+  assetsDirs: ['../assets', '../collection/assets'],
   scoped: true
 })
 export class AloudEntry implements EntryViewer, Entry {

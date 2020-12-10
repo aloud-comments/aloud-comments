@@ -26,7 +26,7 @@ import {
 @Component({
   tag: 'aloud-subentry',
   styleUrl: 'subentry.scss',
-  assetsDirs: ['../assets'],
+  assetsDirs: ['../assets', '../collection/assets'],
   scoped: true
 })
 export class AloudSubEntry implements EntryViewer, Entry {

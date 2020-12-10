@@ -1,6 +1,6 @@
 {
   "name": "aloud-comments",
-  "version": "0.2.5",
+  "version": "0.2.6-a",
   "description": "Web Component commenting engine based on Firebase (and shadow DOM)",
   "repository": "github:aloud-comments/aloud-comments",
   "license": "MIT",
@@ -26,8 +26,8 @@
     "generate": "stencil generate",
     "test": "stencil test --spec --e2e",
     "test.watch": "stencil test --spec --e2e --watchAll",
-    "deploy": "gh-pages -d www/aloud-comments",
-    "deploy:preview": "http-server www"
+    "deploy": "gh-pages -d demo",
+    "deploy:preview": "http-server demo"
   },
   "dependencies": {
     "@stencil/core": "^2.0.1",
