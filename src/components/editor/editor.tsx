@@ -7,7 +7,7 @@ import 'codemirror/addon/mode/overlay'
 import 'codemirror/addon/comment/comment'
 import 'codemirror/addon/display/placeholder'
 
-import { Component, Host, Method, Prop, State, h } from '@stencil/core'
+import { Component, Event, EventEmitter, Host, Prop, State, h } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 import CodeMirror from 'codemirror'
 
@@ -37,6 +37,10 @@ export class Editor {
 
   @State() html = '';
   @State() _isEdit = true;
+
+  @Event() cmChange: EventEmitter<{
+    value: string;
+  }>;
 
   cm!: CodeMirror.Editor;
   cmEl!: HTMLTextAreaElement;
@@ -82,12 +86,14 @@ export class Editor {
       },
       theme: this.theme
     })
-  }
 
-  @Method()
-  async getValue (): Promise<string> {
-    this.value = this.cm.getValue()
-    return this.value
+    this.cm.setValue(this.value)
+
+    this.cm.on('change', (cm) => {
+      this.cmChange.emit({
+        value: cm.getValue()
+      })
+    })
   }
 
   async parse (): Promise<string> {

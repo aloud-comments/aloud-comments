@@ -1,5 +1,5 @@
+import scopeCss from '@patarapolw/scope-css'
 import DOMPurify from 'dompurify'
-import scopeCss from 'scope-css'
 import showdown from 'showdown'
 
 export class ShowdownParser {
@@ -7,7 +7,7 @@ export class ShowdownParser {
     noHeaderId: true,
     parseImgDimensions: true,
     simplifiedAutoLink: true,
-    literalMidWordUnderscores: true,
+    // literalMidWordUnderscores: true,
     strikethrough: true,
     tables: true,
     tasklists: true,
@@ -17,6 +17,17 @@ export class ShowdownParser {
     emoji: true,
     underline: true
   });
+
+  constructor() {
+    /**
+     * ! For some reasons default underscore italic fails to render...
+     */
+    this.mdConverter.addExtension({
+      type: 'lang',
+      regex: /([^\\])_{1}(.*?[^\\])_{1}/g,
+      replace: '$1<i>$2</i>'
+    }, 'underscore-italic')
+  }
 
   parse (md: string): string {
     const div = document.createElement('div')

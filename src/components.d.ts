@@ -53,7 +53,6 @@ export namespace Components {
     }
     interface AloudEditor {
         "firebase": IFirebaseConfig;
-        "getValue": () => Promise<string>;
         "parser": {
     parse: (md: string) => string;
   };
@@ -176,6 +175,9 @@ declare namespace LocalJSX {
     }
     interface AloudEditor {
         "firebase": IFirebaseConfig;
+        "onCmChange"?: (event: CustomEvent<{
+    value: string;
+  }>) => void;
         "parser": {
     parse: (md: string) => string;
   };

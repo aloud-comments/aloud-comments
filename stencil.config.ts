@@ -4,7 +4,7 @@ import { Config } from '@stencil/core'
 import { sass } from '@stencil/sass'
 
 execSync(/* shell */ `
-cp -r www/aloud-comments/js ./demo
+cp -fr www/js ./demo || true
 `)
 
 export const config: Config = {

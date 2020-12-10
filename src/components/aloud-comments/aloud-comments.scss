@@ -2,9 +2,9 @@
 @import '~firebaseui/dist/firebaseui.css';
 
 :host {
-  --min-width: 40vw;
-  --width: 600px;
-  --max-width: 800px;
+  // --min-width: 40vw;
+  --width: max(600px, 50vw);
+  --max-width: 100vw;
 
   // Light theme
   --c-light-bg: #f8faef;
@@ -43,6 +43,11 @@ main {
 
 a {
   color: var(--c-link);
+
+  &:hover {
+    color: inherit;
+    filter: sepia(60%);
+  }
 }
 
 button {
@@ -111,6 +116,11 @@ main {
 
 p {
   margin-bottom: 0.5em;
+}
+
+i.is-deleted {
+  display: block;
+  opacity: 0.5;
 }
 
 img.icon {

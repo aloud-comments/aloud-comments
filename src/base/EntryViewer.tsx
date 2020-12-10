@@ -25,6 +25,10 @@ export function initEntryViewer<T extends EntryViewer> (cls: T): void {
       return
     }
 
+    if(!cls.api) {
+      return
+    }
+
     cls.api
       .get({
         url: cls.url,
@@ -52,7 +56,7 @@ export function initEntryViewer<T extends EntryViewer> (cls: T): void {
     hasChildren: boolean;
   }) => {
     return (async () => {
-      if (cls.api.delete) {
+      if (cls.api) {
         return cls.api.delete({ entryId })
       }
 

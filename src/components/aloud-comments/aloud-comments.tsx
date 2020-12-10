@@ -130,6 +130,7 @@ export class AloudComments implements EntryViewer {
   @State() children: IPost[] = [];
   @State() hasMore = true;
   @State() isSmallScreen = false;
+  @State() mainEditorValue = '';
 
   @Element() $el: HTMLElement;
 
@@ -163,12 +164,6 @@ export class AloudComments implements EntryViewer {
     }
 
     if (this.debug) {
-      this.api = this.api || {
-        get: async () => ({
-          result: [],
-          hasMore: false
-        })
-      };
       (async () => {
         /**
          * These are required.
@@ -243,6 +238,7 @@ export class AloudComments implements EntryViewer {
                   parser={this.parser}
                   firebase={this.firebase}
                   theme={this.cmTheme}
+                  onCmChange={ev => this.mainEditorValue = ev.detail.value}
                   ref={el => {
                     this.mainEditor = el
                   }}
@@ -255,53 +251,32 @@ export class AloudComments implements EntryViewer {
                   <button
                     class="button is-info"
                     type="button"
-                    onClick={() => {
-                      this.mainEditor
-                        .getValue()
-                        .then(async v => {
-                          if (!this.user) {
-                            return
-                          }
-
-                          if (this.api.post) {
-                            return this.api
-                              .post({
-                                url: this.url,
-                                authorId: this.user.id,
-                                markdown: v
-                              })
-                              .then(({ entryId }) => {
-                                this.children = [
-                                  {
-                                    url: this.url,
-                                    parentId: null,
-                                    id: entryId,
-                                    author: this.user,
-                                    markdown: v,
-                                    isDeleted: false,
-                                    createdAt: new Date()
-                                  },
-                                  ...this.children
-                                ]
-                              })
-                          }
-
+                    onClick={async () => {
+                      await this.api
+                        .post({
+                          url: this.url,
+                          authorId: this.user.id,
+                          markdown: this.mainEditorValue
+                        })
+                        .then(({ entryId }) => {
                           this.children = [
                             {
                               url: this.url,
                               parentId: null,
-                              id: Math.random().toString(36).substr(2),
+                              id: entryId,
                               author: this.user,
-                              markdown: v,
+                              markdown: this.mainEditorValue,
                               isDeleted: false,
-                              createdAt: new Date()
+                              createdAt: new Date(),
+                              like: [],
+                              dislike: [],
+                              bookmark: []
                             },
                             ...this.children
                           ]
                         })
-                        .finally(() => {
-                          this.mainEditor.value = ''
-                        })
+
+                      this.mainEditorValue = ''
                     }}
                   >
                     Submit

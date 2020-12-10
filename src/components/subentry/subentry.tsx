@@ -70,13 +70,12 @@ export class AloudSubEntry implements EntryViewer, Entry {
   @State() isExpanded = false;
   @State() children: IPost[] = [];
   @State() hasMore = true;
-
-  editor: HTMLAloudEditorElement;
-  replier: HTMLAloudEditorElement;
+  @State() editorValue = '';
+  @State() replierValue = '';
 
   doLoad: (forced: boolean) => void;
   doDelete: (p: { entryId: string; hasChildren: boolean }) => Promise<void>;
-  getReaction: (r: IReactionType) => Set<string>;
+  getReaction: (r: IReactionType) => string[];
   setReaction: (r: IReactionType) => Promise<void>;
   getSmallNav: (showAuthor: boolean) => HTMLElement;
 
@@ -94,59 +93,69 @@ export class AloudSubEntry implements EntryViewer, Entry {
   render (): HTMLStencilElement {
     return (
       <Host>
-        {this.isEdit ? (
-          <aloud-editor
-            parser={this.parser}
-            firebase={this.firebase}
-            theme={this.cmTheme}
-            ref={el => {
-              this.editor = el
-            }}
-            value={this.entry.markdown}
-          />
-        ) : (
-          <small
-            role="button"
-            onClick={() => {
-              this.isExpanded = true
-            }}
-            innerHTML={(() => {
-              const markdown
-                = `[**@${this.parent.name}**](#) ` + this.entry.markdown
+        {this.entry.isDeleted ? (
+          <i class="is-deleted">Deleted</i>
+        ) : [
+          this.isEdit ? (
+            <aloud-editor
+              parser={this.parser}
+              firebase={this.firebase}
+              theme={this.cmTheme}
+              value={this.entry.markdown}
+              onCmChange={ev => this.editorValue = ev.detail.value}
+            />
+          ) : (
+            <small
+              role="button"
+              onClick={() => {
+                this.isExpanded = true
+              }}
+              innerHTML={(() => {
+                const a = document.createElement('a')
+                a.append(Object.assign(document.createElement('b'), {
+                  innerText: '@' + this.parent.name + ' '
+                }))
+  
+                if (this.isExpanded || !this.isSmallScreen) {
+                  return a.outerHTML + this.parser.parse(this.entry.markdown)
+                }
 
-              if (this.isExpanded || !this.isSmallScreen) {
-                return this.parser.parse(markdown)
-              }
+                let isMarkdownTooBig = this.entry.markdown.length > 80
+  
+                const body = document.createElement('body')
+                body.innerHTML = this.parser.parse(
+                  this.entry.markdown.slice(0, 80)
+                )
+  
+                const { firstElementChild, lastElementChild } = body.firstElementChild || {}
+                if (firstElementChild instanceof HTMLParagraphElement) {
+                  firstElementChild.prepend(a)
+                } else {
+                  body.prepend(a)
+                }
 
-              const body = document.createElement('body')
-              body.innerHTML = this.parser.parse(
-                this.entry.markdown.slice(0, 80)
-              )
-
-              const { lastElementChild } = body.firstElementChild || {}
-              if (lastElementChild instanceof HTMLParagraphElement) {
-                lastElementChild.innerHTML += '...'
-              } else {
-                body.innerHTML += '...'
-              }
-
-              return body.innerHTML
-            })()}
-          />
-        )}
-
-        {this.getSmallNav(true)}
-
-        {this.isReply ? (
-          <aloud-editor
-            theme={this.cmTheme}
-            ref={el => {
-              this.replier = el
-            }}
-            parser={this.parser}
-            firebase={this.firebase}
-          ></aloud-editor>
-        ) : null}
+                if (isMarkdownTooBig) {
+                  if (lastElementChild instanceof HTMLParagraphElement) {
+                    lastElementChild.innerHTML += '...'
+                  } else {
+                    body.innerHTML += '...'
+                  }
+                }
+  
+                return body.innerHTML
+              })()}
+            />
+          ),
+          this.getSmallNav(true),
+          this.isReply ? (
+            <aloud-editor
+              theme={this.cmTheme}
+              parser={this.parser}
+              firebase={this.firebase}
+              onCmChange={ev => this.replierValue = ev.detail.value}
+            ></aloud-editor>
+          ) : null
+        ]}
 
         {this.children.map(it => (
           <aloud-subentry

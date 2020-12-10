@@ -6,9 +6,13 @@ class FakeAPIDatabase extends window.Dexie {
 
   constructor () {
     super('aloud-comments')
-    this.version(1).stores({
+
+    /**
+     * * version 2: ^0.2.6
+     */
+    this.version(2).stores({
       authors: 'id',
-      posts: 'id, [parentId+url], url, createdAt'
+      posts: 'id, [parentId+url], parentId, url, createdAt'
     })
     this.authors = this.table('authors')
     this.posts = this.table('posts')
@@ -24,6 +28,9 @@ export class FakeAPI implements IApi {
     return this.authors[0]
   }
 
+  /**
+   * * This is the main entry point.
+   */
   static async create (urls: string[]): Promise<FakeAPI> {
     const out = new this(urls)
     await out.init()
@@ -31,7 +38,7 @@ export class FakeAPI implements IApi {
   }
 
   /**
-   * !_This constructor is not async'ly initialized._
+   * ! _This constructor is not async'ly initialized._
    */
   private constructor (public urls: string[]) {
     const cleanURL = (u: string) =>
@@ -62,9 +69,11 @@ export class FakeAPI implements IApi {
   private async init (): Promise<void> {
     this.authors = await this.db.authors.filter(() => true).toArray()
 
-    if (this.authors.length < 10) {
+    const authorsCount = 6
+
+    if (this.authors.length < authorsCount) {
       this.authors = await Promise.all(
-        Array(10 - this.authors.length)
+        Array(authorsCount - this.authors.length)
           .fill(null)
           .map(() => this.randomAuthor())
       )
@@ -192,23 +201,15 @@ export class FakeAPI implements IApi {
       createdAt: parent
         ? window.faker.date.between(parent.createdAt, new Date())
         : this.randomDate(),
-      reaction: {
-        like: new Set(
-          Array(Math.floor(Math.random() ** 3 * 10))
-            .fill(null)
-            .map(() => Math.random().toString(36).substr(2))
-        ),
-        dislike: new Set(
-          Array(Math.floor(Math.random() ** 3 * 5))
-            .fill(null)
-            .map(() => Math.random().toString(36).substr(2))
-        ),
-        bookmark: new Set(
-          Array(Math.floor(Math.random() ** 3 * 10))
-            .fill(null)
-            .map(() => Math.random().toString(36).substr(2))
-        )
-      }
+      like: Array(Math.floor(Math.random() ** 3 * 10))
+        .fill(null)
+        .map(() => Math.random().toString(36).substr(2)),
+      dislike: Array(Math.floor(Math.random() ** 3 * 5))
+        .fill(null)
+        .map(() => Math.random().toString(36).substr(2)),
+      bookmark: Array(Math.floor(Math.random() ** 3 * 10))
+        .fill(null)
+        .map(() => Math.random().toString(36).substr(2))
     }
 
     await this.db.posts.add(out)
@@ -219,12 +220,6 @@ export class FakeAPI implements IApi {
   private randomDate (seed = Math.random()): Date {
     const now = new Date()
 
-    // if (seed < 0.1) {
-    //   return faker.date.between(new Date(+now - 1000 * 60), now); // within secs
-    // }
-    // if (seed < 0.3) {
-    //   return faker.date.between(new Date(+now - 1000 * 60 * 60), now); // within mins
-    // }
     if (seed < 0.5) {
       return window.faker.date.between(
         new Date(+now - 1000 * 60 * 60 * 24),
@@ -244,9 +239,6 @@ export class FakeAPI implements IApi {
     ) // within a years
   }
 
-  /**
-   * @type {IApi['get']}
-   */
   public async get ({
     url,
     parentId,
@@ -281,5 +273,93 @@ export class FakeAPI implements IApi {
         }))
       )
     }
+  }
+  
+  public async post({
+    url,
+    authorId,
+    parentId = '',
+    markdown
+  }: Parameters<IApi['post']>[0]): ReturnType<IApi['post']> {
+    const id = Math.random().toString(36).substr(2)
+
+    await this.db.posts.add({
+      id,
+      url,
+      authorId,
+      parentId,
+      markdown,
+      createdAt: new Date(),
+      like: [],
+      dislike: [],
+      bookmark: []
+    })
+
+    return {
+      entryId: id
+    }
+  }
+
+  public async update({
+    entryId,
+    markdown
+  }: Parameters<IApi['update']>[0]): ReturnType<IApi['update']> {
+    const n = await this.db.posts.update(entryId, {
+      markdown,
+      updatedAt: new Date()
+    })
+
+    return {
+      isUpdated: n > 0
+    }
+  }
+
+  public async delete({
+    entryId
+  }: Parameters<IApi['delete']>[0]): ReturnType<IApi['delete']> {
+    if (await this.db.posts.where('parentId').equals(entryId).first()) {
+      await this.db.posts.update(entryId, {
+        markdown: '*Deleted*',
+        isDeleted: true
+      } as Partial<IPostNormalized>)
+
+      return {
+        status: 'suppressed'
+      }
+    }
+    
+    await this.db.posts.delete(entryId)
+
+    return {
+      status: 'deleted'
+    }
+  }
+
+  public async reaction({
+    entryId,
+    userId,
+    reaction
+  }: Parameters<IApi['reaction']>[0]): ReturnType<IApi['reaction']> {
+    const entry = await this.db.posts.get(entryId)
+
+    switch (reaction) {
+      case 'like':
+        entry.dislike = entry.dislike.filter(el => el !== userId)
+        break
+      case 'dislike':
+        entry.like = entry.like.filter(el => el !== userId)
+    }
+
+    if (!entry[reaction].includes(userId)) {
+      entry[reaction].push(userId)
+    } else {
+      entry[reaction] = entry[reaction].filter(el => el !== userId)
+    }
+
+    const { like, dislike, bookmark } = entry
+
+    await this.db.posts.update(entryId, { like, dislike, bookmark } as Partial<IPostNormalized>)
+
+    return { like, dislike, bookmark }
   }
 }
