@@ -30,6 +30,12 @@
     --c-link: var(--c-dark-link);
     --c-button: var(--c-dark-button);
   }
+
+  min-width: var(--min-width);
+  width: var(--width);
+  max-width: var(--max-width);
+  display: block;
+  box-sizing: border-box;
 }
 
 * {
@@ -38,6 +44,13 @@
 }
 
 main {
+  min-width: var(--min-width);
+  width: var(--width);
+  max-width: var(--max-width);
+  display: block;
+
+  padding: 1rem;
+
   background-color: var(--c-bg);
 }
 
@@ -52,7 +65,6 @@ a {
 
 button {
   background-color: var(--c-button);
-  max-height: 1.5em;
 }
 
 // Fix Bulma styles
@@ -106,14 +118,6 @@ button {
   }
 }
 
-main {
-  display: block;
-  min-width: var(--min-width);
-  width: var(--width);
-  max-width: var(--max-width);
-  padding: 1rem;
-}
-
 p {
   margin-bottom: 0.5em;
 }
@@ -130,6 +134,10 @@ img.icon {
   & + span {
     margin-left: 0.3rem;
   }
+}
+
+.media-content {
+  overflow: visible;
 }
 
 aloud-editor {

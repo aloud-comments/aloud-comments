@@ -95,67 +95,72 @@ export class AloudSubEntry implements EntryViewer, Entry {
       <Host>
         {this.entry.isDeleted ? (
           <i class="is-deleted">Deleted</i>
-        ) : [
-          this.isEdit ? (
-            <aloud-editor
-              parser={this.parser}
-              firebase={this.firebase}
-              theme={this.cmTheme}
-              value={this.entry.markdown}
-              onCmChange={ev => this.editorValue = ev.detail.value}
-            />
-          ) : (
-            <small
-              role="button"
-              onClick={() => {
-                this.isExpanded = true
-              }}
-              innerHTML={(() => {
-                const a = document.createElement('a')
-                a.append(Object.assign(document.createElement('b'), {
-                  innerText: '@' + this.parent.name + ' '
-                }))
-  
-                if (this.isExpanded || !this.isSmallScreen) {
-                  return a.outerHTML + this.parser.parse(this.entry.markdown)
-                }
+        ) : (
+          [
+            this.isEdit ? (
+              <aloud-editor
+                parser={this.parser}
+                firebase={this.firebase}
+                theme={this.cmTheme}
+                value={this.entry.markdown}
+                onCmChange={ev => (this.editorValue = ev.detail.value)}
+              />
+            ) : (
+              <small
+                role="button"
+                onClick={() => {
+                  this.isExpanded = true
+                }}
+                innerHTML={(() => {
+                  const a = document.createElement('a')
+                  a.append(
+                    Object.assign(document.createElement('b'), {
+                      innerText: '@' + this.parent.name + ' '
+                    })
+                  )
 
-                let isMarkdownTooBig = this.entry.markdown.length > 80
-  
-                const body = document.createElement('body')
-                body.innerHTML = this.parser.parse(
-                  this.entry.markdown.slice(0, 80)
-                )
-  
-                const { firstElementChild, lastElementChild } = body.firstElementChild || {}
-                if (firstElementChild instanceof HTMLParagraphElement) {
-                  firstElementChild.prepend(a)
-                } else {
-                  body.prepend(a)
-                }
-
-                if (isMarkdownTooBig) {
-                  if (lastElementChild instanceof HTMLParagraphElement) {
-                    lastElementChild.innerHTML += '...'
-                  } else {
-                    body.innerHTML += '...'
+                  if (this.isExpanded || !this.isSmallScreen) {
+                    return a.outerHTML + this.parser.parse(this.entry.markdown)
                   }
-                }
-  
-                return body.innerHTML
-              })()}
-            />
-          ),
-          this.getSmallNav(true),
-          this.isReply ? (
-            <aloud-editor
-              theme={this.cmTheme}
-              parser={this.parser}
-              firebase={this.firebase}
-              onCmChange={ev => this.replierValue = ev.detail.value}
-            ></aloud-editor>
-          ) : null
-        ]}
+
+                  const isMarkdownTooBig = this.entry.markdown.length > 80
+
+                  const body = document.createElement('body')
+                  body.innerHTML = this.parser.parse(
+                    this.entry.markdown.slice(0, 80)
+                  )
+
+                  const { firstElementChild, lastElementChild }
+                    = body.firstElementChild || {}
+                  if (firstElementChild instanceof HTMLParagraphElement) {
+                    firstElementChild.prepend(a)
+                  } else {
+                    body.prepend(a)
+                  }
+
+                  if (isMarkdownTooBig) {
+                    if (lastElementChild instanceof HTMLParagraphElement) {
+                      lastElementChild.innerHTML += '...'
+                    } else {
+                      body.innerHTML += '...'
+                    }
+                  }
+
+                  return body.innerHTML
+                })()}
+              />
+            ),
+            this.getSmallNav(true),
+            this.isReply ? (
+              <aloud-editor
+                theme={this.cmTheme}
+                parser={this.parser}
+                firebase={this.firebase}
+                onCmChange={ev => (this.replierValue = ev.detail.value)}
+              ></aloud-editor>
+            ) : null
+          ]
+        )}
 
         {this.children.map(it => (
           <aloud-subentry

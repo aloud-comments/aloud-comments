@@ -216,7 +216,7 @@ export class AloudComments implements EntryViewer {
 
   render (): HTMLStencilElement {
     return (
-      <main>
+      <main class={this.theme}>
         <article class="media mb-4">
           <figure class="media-left">
             <p class="image is-64x64">
@@ -238,51 +238,47 @@ export class AloudComments implements EntryViewer {
                   parser={this.parser}
                   firebase={this.firebase}
                   theme={this.cmTheme}
-                  onCmChange={ev => this.mainEditorValue = ev.detail.value}
+                  onCmChange={ev => (this.mainEditorValue = ev.detail.value)}
                   ref={el => {
                     this.mainEditor = el
                   }}
                 />
               </p>
             </div>
-            <nav class="level">
-              <div class="level-left">
-                <div class="level-item">
-                  <button
-                    class="button is-info"
-                    type="button"
-                    onClick={async () => {
-                      await this.api
-                        .post({
+            <nav>
+              <button
+                class="button is-info"
+                type="button"
+                onClick={async () => {
+                  await this.api
+                    .post({
+                      url: this.url,
+                      authorId: this.user.id,
+                      markdown: this.mainEditorValue
+                    })
+                    .then(({ entryId }) => {
+                      this.children = [
+                        {
                           url: this.url,
-                          authorId: this.user.id,
-                          markdown: this.mainEditorValue
-                        })
-                        .then(({ entryId }) => {
-                          this.children = [
-                            {
-                              url: this.url,
-                              parentId: null,
-                              id: entryId,
-                              author: this.user,
-                              markdown: this.mainEditorValue,
-                              isDeleted: false,
-                              createdAt: new Date(),
-                              like: [],
-                              dislike: [],
-                              bookmark: []
-                            },
-                            ...this.children
-                          ]
-                        })
+                          parentId: null,
+                          id: entryId,
+                          author: this.user,
+                          markdown: this.mainEditorValue,
+                          isDeleted: false,
+                          createdAt: new Date(),
+                          like: [],
+                          dislike: [],
+                          bookmark: []
+                        },
+                        ...this.children
+                      ]
+                    })
 
-                      this.mainEditorValue = ''
-                    }}
-                  >
-                    Submit
-                  </button>
-                </div>
-              </div>
+                  this.mainEditorValue = ''
+                }}
+              >
+                Submit
+              </button>
             </nav>
           </div>
         </article>
