@@ -1,6 +1,6 @@
 {
   "name": "aloud-comments",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Web Component commenting engine based on Firebase (and shadow DOM)",
   "repository": "github:aloud-comments/aloud-comments",
   "license": "MIT",
@@ -19,8 +19,6 @@
     "loader/"
   ],
   "scripts": {
-    "preinstall": "npx only-allow yarn",
-    "node:version": "node --version",
     "build": "stencil build --docs",
     "watch": "stencil build --dev --watch",
     "serve": "stencil build --dev --watch --serve",
@@ -80,5 +78,11 @@
       "parser": "typescript",
       "style": "module"
     }
+  },
+  "engines": {
+    "node": "14",
+    "npm": "please-use-yarn",
+    "yarn": "1",
+    "pnpm": "please-use-yarn"
   }
 }
