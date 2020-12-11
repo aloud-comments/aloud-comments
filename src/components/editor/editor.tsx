@@ -7,11 +7,17 @@ import 'codemirror/addon/mode/overlay'
 import 'codemirror/addon/comment/comment'
 import 'codemirror/addon/display/placeholder'
 
-import { Component, Event, EventEmitter, Host, Prop, State, h } from '@stencil/core'
+import {
+  Component,
+  Event,
+  EventEmitter,
+  Host,
+  Prop,
+  State,
+  h
+} from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 import CodeMirror from 'codemirror'
-
-import { IFirebaseConfig } from '../../types'
 
 /**
  * @internal
@@ -28,7 +34,6 @@ export class Editor {
    * Use `.getValue()` to get and update the value
    */
   @Prop({ mutable: true, reflect: true }) value = '';
-  @Prop() firebase!: IFirebaseConfig;
   @Prop() parser!: {
     parse: (md: string) => string;
   };
@@ -89,7 +94,7 @@ export class Editor {
 
     this.cm.setValue(this.value)
 
-    this.cm.on('change', (cm) => {
+    this.cm.on('change', cm => {
       this.cmChange.emit({
         value: cm.getValue()
       })

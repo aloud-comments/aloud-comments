@@ -11,13 +11,7 @@ import { HTMLStencilElement } from '@stencil/core/internal'
 
 import { Entry, initEntry } from '../../base/Entry'
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import {
-  IApi,
-  IAuthor,
-  IFirebaseConfig,
-  IPost,
-  IReactionType
-} from '../../types'
+import { IApi, IAuthor, IPost, IReactionType } from '../../types'
 
 /**
  * @internal
@@ -39,7 +33,6 @@ export class AloudEntry implements EntryViewer, Entry {
   @Prop() cmTheme!: string;
 
   @Prop() api!: IApi;
-  @Prop() firebase!: IFirebaseConfig;
   @Prop() depth!: number;
   @Prop() parser!: {
     parse: (md: string) => string;
@@ -101,10 +94,12 @@ export class AloudEntry implements EntryViewer, Entry {
   }
 
   render (): HTMLStencilElement {
-
     return (
       <Host class="media">
-        <figure class="media-left" style={{ visibility: this.entry.isDeleted ? 'hidden' : '' }}>
+        <figure
+          class="media-left"
+          style={{ visibility: this.entry.isDeleted ? 'hidden' : '' }}
+        >
           <p class="image is-48x48">
             {this.entry.isDeleted ? null : (
               <img
@@ -116,66 +111,70 @@ export class AloudEntry implements EntryViewer, Entry {
           </p>
         </figure>
         <div class="media-content">
-          { this.entry.isDeleted ? (
+          {this.entry.isDeleted ? (
             <i class="is-deleted">Deleted</i>
-          ) : [
-            <div class="content">
-              <h5>
-                {this.entry.author.name}
-                {this.entry.author.id === this.user?.id ? <i>{' (me)'}</i> : null}
-              </h5>
-              {this.isEdit ? (
+          ) : (
+            [
+              // eslint-disable-next-line react/jsx-key
+              <div class="content">
+                <h5>
+                  {this.entry.author.name}
+                  {this.entry.author.id === this.user?.id ? (
+                    <i>{' (me)'}</i>
+                  ) : null}
+                </h5>
+                {this.isEdit ? (
+                  <aloud-editor
+                    parser={this.parser}
+                    theme={this.cmTheme}
+                    value={this.entry.markdown}
+                    onCmChange={ev => (this.editorValue = ev.detail.value)}
+                  />
+                ) : (
+                  <div
+                    role="button"
+                    onClick={() => {
+                      this.isExpanded = true
+                    }}
+                    innerHTML={(() => {
+                      if (this.isExpanded || !this.isSmallScreen) {
+                        return this.parser.parse(this.entry.markdown)
+                      }
+
+                      const isMarkdownTooBig = this.entry.markdown.length > 140
+
+                      const body = document.createElement('body')
+                      body.innerHTML = this.parser.parse(
+                        this.entry.markdown.slice(0, 140)
+                      )
+
+                      if (isMarkdownTooBig) {
+                        const { lastElementChild }
+                          = body.firstElementChild || {}
+
+                        if (lastElementChild instanceof HTMLParagraphElement) {
+                          lastElementChild.innerHTML += '...'
+                        } else {
+                          body.innerHTML += '...'
+                        }
+                      }
+
+                      return body.innerHTML
+                    })()}
+                  />
+                )}
+
+                {this.getSmallNav(false)}
+              </div>,
+              this.isReply ? (
                 <aloud-editor
                   parser={this.parser}
-                  firebase={this.firebase}
                   theme={this.cmTheme}
-                  value={this.entry.markdown}
-                  onCmChange={ev => this.editorValue = ev.detail.value}
-                />
-              ) : (
-                <div
-                  role="button"
-                  onClick={() => {
-                    this.isExpanded = true
-                  }}
-                  innerHTML={(() => {
-                    if (this.isExpanded || !this.isSmallScreen) {
-                      return this.parser.parse(this.entry.markdown)
-                    }
-    
-                    let isMarkdownTooBig = this.entry.markdown.length > 140
-      
-                    const body = document.createElement('body')
-                    body.innerHTML = this.parser.parse(
-                      this.entry.markdown.slice(0, 140)
-                    )
-    
-                    if (isMarkdownTooBig) {
-                      const { lastElementChild } = body.firstElementChild || {}
-
-                      if (lastElementChild instanceof HTMLParagraphElement) {
-                        lastElementChild.innerHTML += '...'
-                      } else {
-                        body.innerHTML += '...'
-                      }
-                    }
-      
-                    return body.innerHTML
-                  })()}
-                />
-              )}
-
-              {this.getSmallNav(false)}
-            </div>,
-            this.isReply ? (
-              <aloud-editor
-                parser={this.parser}
-                theme={this.cmTheme}
-                firebase={this.firebase}
-                onCmChange={ev => this.replierValue = ev.detail.value}
-              ></aloud-editor>
-            ) : null
-          ] }
+                  onCmChange={ev => (this.replierValue = ev.detail.value)}
+                ></aloud-editor>
+              ) : null
+            ]
+          )}
 
           {this.children.map(it =>
             this.depth > this.maxDepth ? (
@@ -186,7 +185,6 @@ export class AloudEntry implements EntryViewer, Entry {
                 parent={this.entry.author}
                 entry={it}
                 api={this.api}
-                firebase={this.firebase}
                 limit={this.limit}
                 isSmallScreen={this.isSmallScreen}
                 totalSubEntriesLength={this.subEntriesLength}
@@ -204,7 +202,6 @@ export class AloudEntry implements EntryViewer, Entry {
                 user={this.user}
                 entry={it}
                 api={this.api}
-                firebase={this.firebase}
                 depth={this.depth + 1}
                 isSmallScreen={this.isSmallScreen}
                 cmTheme={this.cmTheme}

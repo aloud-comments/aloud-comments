@@ -5,13 +5,9 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
-import { IApi, IAuthor, IFirebaseConfig, IPost } from "./types";
+import { IApi, IAuthor, IPost } from "./types";
 export namespace Components {
     interface AloudComments {
-        /**
-          * Firebase configuration. Will be `JSON.parse()`  Requires either string version in HTML or Object version in JSX
-         */
-        "_firebase": string;
         /**
           * API configuration
          */
@@ -25,13 +21,9 @@ export namespace Components {
          */
         "debug": boolean;
         /**
-          * Firebase configuration  Actually is nullable in Debug mode.
-         */
-        "firebase": IFirebaseConfig;
-        /**
           * Custom `firebaseui.auth.AuthUI` object
          */
-        "firebaseui"?: firebaseui.auth.AuthUI;
+        "firebaseUiConfig": firebaseui.auth.Config;
         /**
           * Number of children to load by default
          */
@@ -52,7 +44,6 @@ export namespace Components {
         "url": string;
     }
     interface AloudEditor {
-        "firebase": IFirebaseConfig;
         "parser": {
     parse: (md: string) => string;
   };
@@ -67,7 +58,6 @@ export namespace Components {
         "cmTheme": string;
         "depth": number;
         "entry": IPost;
-        "firebase": IFirebaseConfig;
         "isSmallScreen": boolean;
         "parser": {
     parse: (md: string) => string;
@@ -83,7 +73,6 @@ export namespace Components {
     count: number;
   }) => void;
         "entry": IPost;
-        "firebase": IFirebaseConfig;
         "getChildren": () => Promise<IPost[]>;
         "isSmallScreen": boolean;
         "limit": number;
@@ -131,10 +120,6 @@ declare global {
 declare namespace LocalJSX {
     interface AloudComments {
         /**
-          * Firebase configuration. Will be `JSON.parse()`  Requires either string version in HTML or Object version in JSX
-         */
-        "_firebase"?: string;
-        /**
           * API configuration
          */
         "api": IApi;
@@ -147,13 +132,9 @@ declare namespace LocalJSX {
          */
         "debug"?: boolean;
         /**
-          * Firebase configuration  Actually is nullable in Debug mode.
-         */
-        "firebase": IFirebaseConfig;
-        /**
           * Custom `firebaseui.auth.AuthUI` object
          */
-        "firebaseui"?: firebaseui.auth.AuthUI;
+        "firebaseUiConfig"?: firebaseui.auth.Config;
         /**
           * Number of children to load by default
          */
@@ -174,7 +155,6 @@ declare namespace LocalJSX {
         "url"?: string;
     }
     interface AloudEditor {
-        "firebase": IFirebaseConfig;
         "onCmChange"?: (event: CustomEvent<{
     value: string;
   }>) => void;
@@ -192,7 +172,6 @@ declare namespace LocalJSX {
         "cmTheme": string;
         "depth": number;
         "entry": IPost;
-        "firebase": IFirebaseConfig;
         "isSmallScreen": boolean;
         "onDelete"?: (event: CustomEvent<{
     entryId: string;
@@ -212,7 +191,6 @@ declare namespace LocalJSX {
     count: number;
   }) => void;
         "entry": IPost;
-        "firebase": IFirebaseConfig;
         "isSmallScreen": boolean;
         "limit": number;
         "onChildrenCountChanged"?: (event: CustomEvent<{

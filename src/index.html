@@ -25,6 +25,10 @@
   </head>
   <body>
     <style>
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         display: flex;
         flex-direction: column;
@@ -115,10 +119,17 @@
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script src="https://unpkg.com/txtgen"></script>
 
-    <script type="module" src="./build/aloud-comments.esm.js"></script>
-    <script nomodule src="./build/aloud-comments.js"></script>
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/8.2.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.0/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.0/firebase-auth.js"></script>
+
+    <script src="./js/firebase.js"></script>
 
     <script src="./js/router.js"></script>
     <script src="./js/theme.js"></script>
+
+    <script type="module" src="./build/aloud-comments.esm.js"></script>
+    <script nomodule src="./build/aloud-comments.js"></script>
   </body>
 </html>

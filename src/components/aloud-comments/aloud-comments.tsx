@@ -1,18 +1,19 @@
 import { Component, Element, Prop, State, h } from '@stencil/core'
 import { HTMLStencilElement, Watch } from '@stencil/core/internal'
-import firebaseui from 'firebaseui'
+import * as firebaseui from 'firebaseui'
 
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import { IApi, IAuthor, IFirebaseConfig, IPost } from '../../types'
+import { IApi, IAuthor, IPost } from '../../types'
 import { isBgDark } from '../../utils/color'
 import { FakeAPI } from '../../utils/faker'
 import { ShowdownParser } from '../../utils/parser'
 
 declare global {
-  /**
-   * Only append to window Object in Debug mode.
-   */
   interface Window {
+    /**
+     * Firebase will be attached to window Object, if not exists.
+     */
+    firebase: typeof import('firebase/app').default;
     /**
      * ```html
      * <script
@@ -61,33 +62,13 @@ export class AloudComments implements EntryViewer {
   @Prop() cmTheme = 'default';
 
   /**
-   * Firebase configuration. Will be `JSON.parse()`
-   *
-   * Requires either string version in HTML or Object version in JSX
-   */
-  @Prop({
-    attribute: 'firebase'
-  })
-  _firebase: string;
-
-  /**
-   * Firebase configuration
-   *
-   * Actually is nullable in Debug mode.
-   */
-  @Prop({
-    mutable: true
-  })
-  firebase!: IFirebaseConfig;
-
-  /**
    * Custom `firebaseui.auth.AuthUI` object
    */
   @Prop({
     mutable: true,
     reflect: true
   })
-  firebaseui?: firebaseui.auth.AuthUI;
+  firebaseUiConfig: firebaseui.auth.Config;
 
   /**
    * API configuration
@@ -131,10 +112,11 @@ export class AloudComments implements EntryViewer {
   @State() hasMore = true;
   @State() isSmallScreen = false;
   @State() mainEditorValue = '';
+  @State() isImageHovered = false;
 
   @Element() $el: HTMLElement;
 
-  mainEditor: HTMLAloudEditorElement;
+  firebaseUI: firebaseui.auth.AuthUI;
 
   doLoad: (forced: boolean) => void;
   doDelete: (p: { entryId: string; hasChildren: boolean }) => Promise<void>;
@@ -147,7 +129,7 @@ export class AloudComments implements EntryViewer {
     initEntryViewer(this)
   }
 
-  componentWillLoad (): void {
+  async componentWillLoad (): Promise<void> {
     const mq = matchMedia('(max-width: 600px)')
 
     if (
@@ -186,9 +168,14 @@ export class AloudComments implements EntryViewer {
         this.api = api
         this.user = api.user
       })()
-    } else {
-      this.firebase = this.firebase || JSON.parse(this._firebase)
     }
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    window.firebase
+      = window.firebase || (await import('firebase/app').then(r => r.default))
+
+    this.firebaseUI = new firebaseui.auth.AuthUI(window.firebase.auth())
 
     this.parser = this.parser || new ShowdownParser()
 
@@ -216,18 +203,80 @@ export class AloudComments implements EntryViewer {
 
   render (): HTMLStencilElement {
     return (
-      <main class={this.theme}>
+      <main
+        class={this.theme}
+        onClick={ev => {
+          if (
+            ev
+              .composedPath()
+              .some(
+                el =>
+                  el instanceof HTMLElement && /(^| )popup/.test(el.className)
+              )
+          ) {
+            return
+          }
+          this.isImageHovered = false
+        }}
+      >
         <article class="media mb-4">
           <figure class="media-left">
-            <p class="image is-64x64">
+            <p
+              class="image is-64x64 popup-container"
+              onClick={() => (this.isImageHovered = true)}
+            >
+              {this.isImageHovered ? (
+                this.user ? (
+                  <div
+                    class="popup"
+                    onMouseLeave={() => (this.isImageHovered = false)}
+                  >
+                    <button class="button is-danger" style={{ margin: '1rem' }}>
+                      Click to logout
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    class="popup"
+                    style={{ width: '300px' }}
+                    ref={r => {
+                      setTimeout(async () => {
+                        if (!r) {
+                          return
+                        }
+
+                        r.textContent = ''
+
+                        this.firebaseUI.start(
+                          r,
+                          this.firebaseUiConfig || {
+                            signInOptions: [
+                              window.firebase.auth.GoogleAuthProvider
+                                .PROVIDER_ID,
+                              window.firebase.auth.EmailAuthProvider
+                                .PROVIDER_ID,
+                              firebaseui.auth.AnonymousAuthProvider.PROVIDER_ID
+                            ],
+                            popupMode: true
+                          }
+                        )
+                      }, 100)
+                    }}
+                    onMouseLeave={() => (this.isImageHovered = false)}
+                  />
+                )
+              ) : null}
               {this.user ? (
                 <img
                   src={this.user.image}
                   alt={this.user.name}
-                  title={this.user.name}
+                  title={`${this.user.name} - Click to logout`}
                 />
               ) : (
-                <img src="https://www.gravatar.com/avatar?d=mp" />
+                <img
+                  src="https://www.gravatar.com/avatar?d=mp"
+                  title="Click to login"
+                />
               )}
             </p>
           </figure>
@@ -236,12 +285,8 @@ export class AloudComments implements EntryViewer {
               <p class="control">
                 <aloud-editor
                   parser={this.parser}
-                  firebase={this.firebase}
                   theme={this.cmTheme}
                   onCmChange={ev => (this.mainEditorValue = ev.detail.value)}
-                  ref={el => {
-                    this.mainEditor = el
-                  }}
                 />
               </p>
             </div>
@@ -291,7 +336,6 @@ export class AloudComments implements EntryViewer {
             user={this.user}
             entry={it}
             api={this.api}
-            firebase={this.firebase}
             isSmallScreen={this.isSmallScreen}
             depth={1}
             cmTheme={this.cmTheme}

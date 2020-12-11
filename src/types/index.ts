@@ -13,7 +13,7 @@ export const ReactionTypes: IReactionType[] = ['like', 'dislike', 'bookmark']
 
 export type IReaction = {
   [t in IReactionType]: string[];
-}
+};
 
 export interface IPost extends IReaction {
   url: string;
@@ -29,7 +29,7 @@ export interface IPost extends IReaction {
 export type IPostNormalized = Omit<IPost, 'author'> & {
   parentId: string;
   authorId: string;
-}
+};
 
 export interface IApi {
   get: (p: {
@@ -49,8 +49,11 @@ export interface IApi {
   }) => Promise<{
     entryId: string;
   }>;
-  update: (p: { entryId: string; markdown: string }) => Promise<{
-    isUpdated: boolean
+  update: (p: {
+    entryId: string;
+    markdown: string;
+  }) => Promise<{
+    isUpdated: boolean;
   }>;
   reaction: (p: {
     entryId: string;
@@ -63,7 +66,3 @@ export interface IApi {
     status: 'deleted' | 'suppressed';
   }>;
 }
-
-export type IFirebaseConfig = {
-  [k: string]: unknown;
-};

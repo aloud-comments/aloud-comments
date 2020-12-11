@@ -1,5 +1,8 @@
 {
   "editor.defaultFormatter": "rvest.vs-code-prettier-eslint",
   "sort-imports.on-save": true,
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "files.associations": {
+    ".firebaserc": "json"
+  }
 }

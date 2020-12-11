@@ -12,13 +12,7 @@ import { HTMLStencilElement } from '@stencil/core/internal'
 
 import { Entry, initEntry } from '../../base/Entry'
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import {
-  IApi,
-  IAuthor,
-  IFirebaseConfig,
-  IPost,
-  IReactionType
-} from '../../types'
+import { IApi, IAuthor, IPost, IReactionType } from '../../types'
 
 /**
  * @internal
@@ -41,7 +35,6 @@ export class AloudSubEntry implements EntryViewer, Entry {
   @Prop() cmTheme!: string;
 
   @Prop() api!: IApi;
-  @Prop() firebase!: IFirebaseConfig;
   @Prop() parser!: {
     parse: (md: string) => string;
   };
@@ -100,7 +93,6 @@ export class AloudSubEntry implements EntryViewer, Entry {
             this.isEdit ? (
               <aloud-editor
                 parser={this.parser}
-                firebase={this.firebase}
                 theme={this.cmTheme}
                 value={this.entry.markdown}
                 onCmChange={ev => (this.editorValue = ev.detail.value)}
@@ -155,7 +147,6 @@ export class AloudSubEntry implements EntryViewer, Entry {
               <aloud-editor
                 theme={this.cmTheme}
                 parser={this.parser}
-                firebase={this.firebase}
                 onCmChange={ev => (this.replierValue = ev.detail.value)}
               ></aloud-editor>
             ) : null
@@ -171,7 +162,6 @@ export class AloudSubEntry implements EntryViewer, Entry {
             parent={this.entry.author}
             entry={it}
             api={this.api}
-            firebase={this.firebase}
             limit={this.totalSubEntriesLength > 5 ? 0 : this.limit}
             isSmallScreen={this.isSmallScreen}
             totalSubEntriesLength={this.totalSubEntriesLength}
