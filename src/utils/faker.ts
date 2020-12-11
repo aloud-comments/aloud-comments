@@ -1,19 +1,33 @@
 import { IApi, IAuthor, IAuthorNormalized, IPostNormalized } from '../types'
 
 class FakeAPIDatabase extends window.Dexie {
+  /**
+   * * version 4: ^0.2.8
+   */
+  static version = 4;
+  static dbname = 'aloud-comments';
+
   public authors: Dexie.Table<IAuthorNormalized, string>;
   public posts: Dexie.Table<IPostNormalized, string>;
 
-  constructor () {
-    super('aloud-comments')
+  static async create () {
+    try {
+      const tempDb = await new window.Dexie(FakeAPIDatabase.dbname).open()
+      if (tempDb.verno < FakeAPIDatabase.version) await tempDb.delete()
+      tempDb.close()
+    } catch (_) {}
 
-    /**
-     * * version 2: ^0.2.6
-     */
-    this.version(2).stores({
+    return new FakeAPIDatabase()
+  }
+
+  private constructor () {
+    super(FakeAPIDatabase.dbname)
+
+    this.version(FakeAPIDatabase.version).stores({
       authors: 'id',
       posts: 'id, [parentId+url], parentId, url, createdAt'
     })
+
     this.authors = this.table('authors')
     this.posts = this.table('posts')
   }
@@ -22,7 +36,7 @@ class FakeAPIDatabase extends window.Dexie {
 export class FakeAPI implements IApi {
   private authors: IAuthor[] = [];
 
-  private db = new FakeAPIDatabase();
+  private db!: FakeAPIDatabase;
 
   get user (): IAuthor {
     return this.authors[0]
@@ -67,6 +81,8 @@ export class FakeAPI implements IApi {
   }
 
   private async init (): Promise<void> {
+    this.db = await FakeAPIDatabase.create()
+
     this.authors = await this.db.authors.filter(() => true).toArray()
 
     const authorsCount = 6
@@ -274,8 +290,8 @@ export class FakeAPI implements IApi {
       )
     }
   }
-  
-  public async post({
+
+  public async post ({
     url,
     authorId,
     parentId = '',
@@ -300,7 +316,7 @@ export class FakeAPI implements IApi {
     }
   }
 
-  public async update({
+  public async update ({
     entryId,
     markdown
   }: Parameters<IApi['update']>[0]): ReturnType<IApi['update']> {
@@ -314,7 +330,7 @@ export class FakeAPI implements IApi {
     }
   }
 
-  public async delete({
+  public async delete ({
     entryId
   }: Parameters<IApi['delete']>[0]): ReturnType<IApi['delete']> {
     if (await this.db.posts.where('parentId').equals(entryId).first()) {
@@ -327,7 +343,7 @@ export class FakeAPI implements IApi {
         status: 'suppressed'
       }
     }
-    
+
     await this.db.posts.delete(entryId)
 
     return {
@@ -335,7 +351,7 @@ export class FakeAPI implements IApi {
     }
   }
 
-  public async reaction({
+  public async reaction ({
     entryId,
     userId,
     reaction
@@ -358,7 +374,11 @@ export class FakeAPI implements IApi {
 
     const { like, dislike, bookmark } = entry
 
-    await this.db.posts.update(entryId, { like, dislike, bookmark } as Partial<IPostNormalized>)
+    await this.db.posts.update(entryId, {
+      like,
+      dislike,
+      bookmark
+    } as Partial<IPostNormalized>)
 
     return { like, dislike, bookmark }
   }
