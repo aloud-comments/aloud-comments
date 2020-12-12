@@ -69,4 +69,5 @@ export interface IApi {
     status?: 'deleted' | 'suppressed';
     error?: string;
   }>;
+  getAuthor: (id: string) => Promise<IAuthorNormalized | null>;
 }

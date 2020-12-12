@@ -1,4 +1,4 @@
-import { Component, Element, Host, Prop, State, Watch, h } from '@stencil/core'
+import { Component, Host, Prop, State, Watch, h } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 import * as firebaseui from 'firebaseui'
 
@@ -6,6 +6,7 @@ import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
 import { IApi, IAuthor, IPost } from '../../types/base'
 import { isBgDark } from '../../utils/color'
 import { DexieAPI } from '../../utils/dexie'
+import { FirebaseAPI } from '../../utils/firebase'
 import { ShowdownParser } from '../../utils/parser'
 
 declare global {
@@ -103,8 +104,10 @@ export class AloudComments implements EntryViewer {
    * Whether to generate random entries
    *
    * Requires `faker` to be installed.
+   *
+   * Comma-separated
    */
-  @Prop() debug = false;
+  @Prop() debug?: string;
 
   /**
    * Allows theme to be set and updated
@@ -116,12 +119,11 @@ export class AloudComments implements EntryViewer {
 
   @State() user?: IAuthor;
   @State() children: IPost[] = [];
+  @State() mainEditorValue = '';
   @State() hasMore = true;
   @State() isSmallScreen = false;
-  @State() mainEditorValue = '';
   @State() isImageHovered = false;
-
-  @Element() $el: HTMLElement;
+  @State() isLoading = true;
 
   firebaseUI: firebaseui.auth.AuthUI;
 
@@ -165,7 +167,29 @@ export class AloudComments implements EntryViewer {
 
     matchMedia('(prefers-color-scheme: dark)')
 
+    let isFirebase = false
+    const setUser = async (u: import('firebase').default.User) => {
+      this.user = u ? await this.api.getAuthor(u.email) : undefined
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      window.firebase
+        = window.firebase || (await import('firebase/app').then(r => r.default))
+      this.firebaseUI = new firebaseui.auth.AuthUI(window.firebase.auth())
+
+      window.firebase.auth().onAuthStateChanged(u => {
+        setUser(u)
+      })
+
+      isFirebase = true
+    } catch (e) {
+      console.error(e)
+    }
+
     if (this.debug) {
+      window.isBgDark = isBgDark;
       (async () => {
         /**
          * These are required.
@@ -182,21 +206,24 @@ export class AloudComments implements EntryViewer {
          * window.isBgDark
          * ```
          */
-        window.isBgDark = isBgDark
-
-        const api = new DexieAPI()
+        const api = isFirebase ? new FirebaseAPI() : new DexieAPI()
         await api.populateDebug(['/', '#/spa1', '#/spa2'])
         this.api = api
-        this.user = api.firstAuthor
+
+        setTimeout(() => {
+          this.user = this.user || api.firstAuthor
+        }, 50)
       })()
+    } else {
+      const api = new FirebaseAPI()
+      this.api = api
     }
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    window.firebase
-      = window.firebase || (await import('firebase/app').then(r => r.default))
-
-    this.firebaseUI = new firebaseui.auth.AuthUI(window.firebase.auth())
+    try {
+      setUser(window.firebase.auth().currentUser)
+    } catch (e) {
+      console.error(e)
+    }
 
     this.parser = this.parser || new ShowdownParser()
 
@@ -206,6 +233,7 @@ export class AloudComments implements EntryViewer {
   @Watch('api')
   @Watch('url')
   onPropStateChanged (): void {
+    this.isLoading = false
     this.children = []
     this.doLoad(true)
   }
@@ -372,10 +400,28 @@ export class AloudComments implements EntryViewer {
               depth={1}
               cmTheme={this.cmTheme}
               onDelete={evt => this.doDelete(evt.detail)}
-            ></aloud-entry>
+            />
           ))}
 
-          {this.hasMore ? (
+          {this.isLoading ? (
+            <div class="inTurnFadingTextG">
+              <div>-</div>
+              <div>-</div>
+              <div>&nbsp;</div>
+              <div>L</div>
+              <div>o</div>
+              <div>a</div>
+              <div>d</div>
+              <div>i</div>
+              <div>n</div>
+              <div>g</div>
+              <div>&nbsp;</div>
+              <div>-</div>
+              <div>-</div>
+            </div>
+          ) : null}
+
+          {!this.isLoading && this.hasMore ? (
             <button
               class="more"
               type="button"

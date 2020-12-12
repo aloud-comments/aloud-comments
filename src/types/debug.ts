@@ -13,6 +13,7 @@ export abstract class DebuggableAPI implements IApi {
   );
 
   authorIds: string[] = [];
+  firstAuthor: IAuthor;
 
   abstract getAuthorIds(): Promise<string[]>;
   abstract addAuthor(
@@ -57,7 +58,10 @@ export abstract class DebuggableAPI implements IApi {
       .replace(/\/$/, '')
   }
 
-  async populateDebug (urls: string[], maxAuthorCount = 6): Promise<void> {
+  async populateDebug (urls: string[]): Promise<void> {
+    const authorCount = 5
+    const minItemsAtFirstLevel = 3
+
     urls = urls
       .map(u => this.cleanURL(u))
       .map(u =>
@@ -74,16 +78,15 @@ export abstract class DebuggableAPI implements IApi {
 
     this.authorIds = await this.getAuthorIds()
 
-    if (this.authorIds.length < maxAuthorCount) {
-      this.authorIds = [
-        ...this.authorIds,
-        ...(await Promise.all(
-          Array(maxAuthorCount - this.authorIds.length)
-            .fill(null)
-            .map(() => this.makeAuthor().then(a => a.id))
-        ))
-      ]
+    if (!this.authorIds.length) {
+      this.authorIds = await Promise.all(
+        Array(authorCount)
+          .fill(null)
+          .map(() => this.makeAuthor().then(a => a.id))
+      )
     }
+
+    this.firstAuthor = await this.getAuthor(this.authorIds[0])
 
     await Promise.all(
       urls.map(u =>
@@ -91,7 +94,9 @@ export abstract class DebuggableAPI implements IApi {
           url: u
         }).then(async c => {
           if (!c) {
-            return this.recurseGenPost(u, [], { minItems: 3 })
+            return this.recurseGenPost(u, [], {
+              minItems: minItemsAtFirstLevel
+            })
           }
           return c
         })

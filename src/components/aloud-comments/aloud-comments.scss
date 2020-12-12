@@ -120,3 +120,38 @@ small {
     }
   }
 }
+
+.inTurnFadingTextG {
+  display: flex;
+  justify-content: center;
+
+  > div {
+    $n: 20;
+    $per-char: 0.1s;
+
+    text-decoration: none;
+    font-weight: normal;
+    font-style: italic;
+    float: left;
+    animation-name: bounce_inTurnFadingTextG;
+    animation-duration: $per-char * $n;
+    animation-iteration-count: infinite;
+    animation-direction: normal;
+
+    @keyframes bounce_inTurnFadingTextG {
+      0% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+      }
+    }
+
+    @for $i from 1 through $n {
+      &:nth-child(#{$i}) {
+        animation-delay: $per-char * $i;
+      }
+    }
+  }
+}
