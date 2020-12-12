@@ -11,7 +11,7 @@ import { HTMLStencilElement } from '@stencil/core/internal'
 
 import { Entry, initEntry } from '../../base/Entry'
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import { IApi, IAuthor, IPost, IReactionType } from '../../types'
+import { IApi, IAuthor, IPost, IReactionType } from '../../types/base'
 
 /**
  * @internal

@@ -18,7 +18,10 @@ export type IReaction = {
 export interface IPost extends IReaction {
   url: string;
   id: string;
-  parentId?: string;
+  /**
+   * @default ''
+   */
+  parentId: string;
   author: IAuthor;
   markdown: string;
   createdAt: Date;
@@ -53,7 +56,7 @@ export interface IApi {
     entryId: string;
     markdown: string;
   }) => Promise<{
-    isUpdated: boolean;
+    error?: string;
   }>;
   reaction: (p: {
     entryId: string;
@@ -63,6 +66,7 @@ export interface IApi {
   delete: (p: {
     entryId: string;
   }) => Promise<{
-    status: 'deleted' | 'suppressed';
+    status?: 'deleted' | 'suppressed';
+    error?: string;
   }>;
 }

@@ -1,6 +1,6 @@
 import { EventEmitter, getAssetPath, h } from '@stencil/core'
 
-import { IApi, IAuthor, IPost, IReactionType } from '../types'
+import { IApi, IAuthor, IPost, IReactionType } from '../types/base'
 import { humanizeDurationToNow } from '../utils/humanize'
 
 export interface Entry {
@@ -59,7 +59,9 @@ export function initEntry<T extends Entry> (cls: T): void {
           <a
             role="button"
             title="Like"
-            class={cls.getReaction('like').includes(cls.user.id) ? 'active' : ''}
+            class={
+              cls.getReaction('like').includes(cls.user.id) ? 'active' : ''
+            }
             onClick={() => cls.setReaction('like')}
           >
             <img
@@ -80,7 +82,9 @@ export function initEntry<T extends Entry> (cls: T): void {
           <a
             role="button"
             title="Dislike"
-            class={cls.getReaction('dislike').includes(cls.user.id) ? 'active' : ''}
+            class={
+              cls.getReaction('dislike').includes(cls.user.id) ? 'active' : ''
+            }
             onClick={() => cls.setReaction('dislike')}
           >
             <img
@@ -101,7 +105,9 @@ export function initEntry<T extends Entry> (cls: T): void {
           <a
             role="button"
             title="Bookmark"
-            class={cls.getReaction('bookmark').includes(cls.user.id) ? 'active' : ''}
+            class={
+              cls.getReaction('bookmark').includes(cls.user.id) ? 'active' : ''
+            }
             onClick={() => cls.setReaction('bookmark')}
           >
             <img
@@ -152,7 +158,11 @@ export function initEntry<T extends Entry> (cls: T): void {
               cls.isReply = !cls.isReply
             }}
           >
-            {cls.isReply ? cls.replierValue.trim() ? 'Post reply' : 'Undo reply' : 'Reply'}
+            {cls.isReply
+              ? cls.replierValue.trim()
+                  ? 'Post reply'
+                  : 'Undo reply'
+              : 'Reply'}
           </a>
         </span>
       )
@@ -170,8 +180,8 @@ export function initEntry<T extends Entry> (cls: T): void {
                     entryId: cls.entry.id,
                     markdown: cls.editorValue
                   })
-                  .then(({ isUpdated }) => {
-                    if (isUpdated) {
+                  .then(({ error }) => {
+                    if (!error) {
                       cls.entry = {
                         ...cls.entry,
                         markdown: cls.editorValue,
@@ -184,7 +194,11 @@ export function initEntry<T extends Entry> (cls: T): void {
               cls.isEdit = !cls.isEdit
             }}
           >
-            {cls.isEdit ? cls.editorValue.trim() ? 'Save' : 'Undo edit' : 'Edit'}
+            {cls.isEdit
+              ? cls.editorValue.trim()
+                  ? 'Save'
+                  : 'Undo edit'
+              : 'Edit'}
           </a>
         </span>,
         <span>
@@ -205,9 +219,7 @@ export function initEntry<T extends Entry> (cls: T): void {
 
     const smallItalic: string[] = []
     if (showAuthor) {
-      smallItalic.push(
-        `by ${cls.entry.author.name}`
-      )
+      smallItalic.push(`by ${cls.entry.author.name}`)
 
       if (cls.entry.author.id === cls.user?.id) {
         smallItalic.push('(me)')

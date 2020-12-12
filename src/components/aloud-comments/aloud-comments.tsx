@@ -3,16 +3,12 @@ import { HTMLStencilElement } from '@stencil/core/internal'
 import * as firebaseui from 'firebaseui'
 
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import { IApi, IAuthor, IPost } from '../../types'
+import { IApi, IAuthor, IPost } from '../../types/base'
 import { isBgDark } from '../../utils/color'
-import { FakeAPI } from '../../utils/faker'
+import { DexieAPI } from '../../utils/dexie'
 import { ShowdownParser } from '../../utils/parser'
 
 declare global {
-  interface LinkHTMLAttributes {
-    crossOrigin: string;
-  }
-
   interface Window {
     /**
      * Firebase will be attached to window Object, if not exists.
@@ -188,9 +184,10 @@ export class AloudComments implements EntryViewer {
          */
         window.isBgDark = isBgDark
 
-        const api = await FakeAPI.create(['/', '#/spa1', '#/spa2'])
+        const api = new DexieAPI()
+        await api.populateDebug(['/', '#/spa1', '#/spa2'])
         this.api = api
-        this.user = api.user
+        this.user = api.firstAuthor
       })()
     }
 
@@ -217,6 +214,11 @@ export class AloudComments implements EntryViewer {
     return (
       <Host>
         <base href="/" />
+        <link
+          type="text/css"
+          rel="stylesheet"
+          href="https://www.gstatic.com/firebasejs/ui/4.7.1/firebase-ui-auth.css"
+        />
         {
           <link
             rel="stylesheet"

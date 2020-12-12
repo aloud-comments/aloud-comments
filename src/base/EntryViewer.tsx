@@ -1,6 +1,6 @@
 import { EventEmitter } from '@stencil/core'
 
-import { IApi, IPost } from '../types'
+import { IApi, IPost } from '../types/base'
 
 export interface EntryViewer {
   url: string;
@@ -25,7 +25,7 @@ export function initEntryViewer<T extends EntryViewer> (cls: T): void {
       return
     }
 
-    if(!cls.api) {
+    if (!cls.api) {
       return
     }
 
