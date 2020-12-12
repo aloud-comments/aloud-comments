@@ -1,5 +1,5 @@
-import { Component, Element, Prop, State, h } from '@stencil/core'
-import { HTMLStencilElement, Watch } from '@stencil/core/internal'
+import { Component, Element, Host, Prop, State, Watch, h } from '@stencil/core'
+import { HTMLStencilElement } from '@stencil/core/internal'
 import * as firebaseui from 'firebaseui'
 
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
@@ -9,6 +9,10 @@ import { FakeAPI } from '../../utils/faker'
 import { ShowdownParser } from '../../utils/parser'
 
 declare global {
+  interface LinkHTMLAttributes {
+    crossOrigin: string;
+  }
+
   interface Window {
     /**
      * Firebase will be attached to window Object, if not exists.
@@ -39,6 +43,10 @@ declare global {
      * Only attached to window in Debug mode.
      */
     isBgDark: (bgColor?: string) => boolean;
+  }
+
+  interface LinkHTMLAttributes {
+    crossOrigin: string;
   }
 }
 
@@ -105,7 +113,10 @@ export class AloudComments implements EntryViewer {
   /**
    * Allows theme to be set and updated
    */
-  @Prop() theme?: 'dark' | 'light';
+  @Prop({
+    mutable: true
+  })
+  theme: 'dark' | 'light' = 'light';
 
   @State() user?: IAuthor;
   @State() children: IPost[] = [];
@@ -130,20 +141,33 @@ export class AloudComments implements EntryViewer {
   }
 
   async componentWillLoad (): Promise<void> {
-    const mq = matchMedia('(max-width: 600px)')
+    {
+      const mq = matchMedia('(max-width: 600px)')
 
-    if (
-      mq.matches
-      || /(Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini)/i.test(
-        navigator.userAgent
-      )
-    ) {
-      this.isSmallScreen = true
+      if (
+        mq.matches
+        || /(Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini)/i.test(
+          navigator.userAgent
+        )
+      ) {
+        this.isSmallScreen = true
+      }
+
+      mq.onchange = evt => {
+        this.isSmallScreen = evt.matches
+      }
     }
 
-    mq.onchange = evt => {
-      this.isSmallScreen = evt.matches
+    const trySetTheme = (colorScheme: 'dark' | 'light') => {
+      if (matchMedia(`(prefers-color-scheme: ${colorScheme})`).matches) {
+        this.theme = colorScheme
+      }
     }
+
+    trySetTheme('light')
+    trySetTheme('dark')
+
+    matchMedia('(prefers-color-scheme: dark)')
 
     if (this.debug) {
       (async () => {
@@ -182,18 +206,6 @@ export class AloudComments implements EntryViewer {
     this.doLoad(true)
   }
 
-  @Watch('theme')
-  onThemeChanged (): void {
-    if (!(this.theme === 'dark' || this.theme === 'light')) {
-      this.theme = isBgDark() ? 'dark' : 'light'
-    }
-
-    this.$el.style.setProperty('--c-bg', `var(--c-${this.theme}-bg)`)
-    this.$el.style.setProperty('--c-font', `var(--c-${this.theme}-font)`)
-    this.$el.style.setProperty('--c-link', `var(--c-${this.theme}-link)`)
-    this.$el.style.setProperty('--c-button', `var(--c-${this.theme}-button)`)
-  }
-
   @Watch('api')
   @Watch('url')
   onPropStateChanged (): void {
@@ -203,152 +215,175 @@ export class AloudComments implements EntryViewer {
 
   render (): HTMLStencilElement {
     return (
-      <main
-        class={this.theme}
-        onClick={ev => {
-          if (
-            ev
-              .composedPath()
-              .some(
-                el =>
-                  el instanceof HTMLElement && /(^| )popup/.test(el.className)
-              )
-          ) {
-            return
-          }
-          this.isImageHovered = false
-        }}
-      >
-        <article class="media mb-4">
-          <figure class="media-left">
-            <p
-              class="image is-64x64 popup-container"
-              onClick={() => (this.isImageHovered = true)}
-            >
-              {this.isImageHovered ? (
-                this.user ? (
-                  <div
-                    class="popup"
-                    onMouseLeave={() => (this.isImageHovered = false)}
-                  >
-                    <button class="button is-danger" style={{ margin: '1rem' }}>
-                      Click to logout
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    class="popup"
-                    style={{ width: '300px' }}
-                    ref={r => {
-                      setTimeout(async () => {
-                        if (!r) {
-                          return
-                        }
+      <Host>
+        <base href="/" />
+        {
+          <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.1/css/bulma.min.css"
+            integrity="sha512-ZRv40llEogRmoWgZwnsqke3HNzJ0kiI0+pcMgiz2bxO6Ew1DVBtWjVn0qjrXdT3+u+pSN36gLgmJiiQ3cQtyzA=="
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            crossOrigin="anonymous"
+          />
+        }
 
-                        r.textContent = ''
-
-                        this.firebaseUI.start(
-                          r,
-                          this.firebaseUiConfig || {
-                            signInOptions: [
-                              window.firebase.auth.GoogleAuthProvider
-                                .PROVIDER_ID,
-                              window.firebase.auth.EmailAuthProvider
-                                .PROVIDER_ID,
-                              firebaseui.auth.AnonymousAuthProvider.PROVIDER_ID
-                            ],
-                            popupMode: true
-                          }
-                        )
-                      }, 100)
-                    }}
-                    onMouseLeave={() => (this.isImageHovered = false)}
-                  />
+        <main
+          data-theme={this.theme}
+          onClick={ev => {
+            if (
+              ev
+                .composedPath()
+                .some(
+                  el =>
+                    el instanceof HTMLElement
+                    && /(^| )popup/.test(el.className)
                 )
-              ) : null}
-              {this.user ? (
-                <img
-                  src={this.user.image}
-                  alt={this.user.name}
-                  title={`${this.user.name} - Click to logout`}
-                />
-              ) : (
-                <img
-                  src="https://www.gravatar.com/avatar?d=mp"
-                  title="Click to login"
-                />
-              )}
-            </p>
-          </figure>
-          <div class="media-content">
-            <div class="field">
-              <p class="control">
-                <aloud-editor
-                  parser={this.parser}
-                  theme={this.cmTheme}
-                  onCmChange={ev => (this.mainEditorValue = ev.detail.value)}
-                />
-              </p>
-            </div>
-            <nav>
-              <button
-                class="button is-info"
-                type="button"
-                onClick={async () => {
-                  await this.api
-                    .post({
-                      url: this.url,
-                      authorId: this.user.id,
-                      markdown: this.mainEditorValue
-                    })
-                    .then(({ entryId }) => {
-                      this.children = [
-                        {
-                          url: this.url,
-                          parentId: null,
-                          id: entryId,
-                          author: this.user,
-                          markdown: this.mainEditorValue,
-                          isDeleted: false,
-                          createdAt: new Date(),
-                          like: [],
-                          dislike: [],
-                          bookmark: []
-                        },
-                        ...this.children
-                      ]
-                    })
-
-                  this.mainEditorValue = ''
-                }}
+            ) {
+              return
+            }
+            this.isImageHovered = false
+          }}
+        >
+          <article class="media mb-4">
+            <figure class="media-left">
+              <p
+                class="image is-64x64 popup-container"
+                onClick={() => (this.isImageHovered = true)}
               >
-                Submit
-              </button>
-            </nav>
-          </div>
-        </article>
+                {this.isImageHovered ? (
+                  this.user ? (
+                    <div
+                      class="popup"
+                      onMouseLeave={() => (this.isImageHovered = false)}
+                    >
+                      <button
+                        class="button is-danger"
+                        style={{ margin: '1rem' }}
+                      >
+                        Click to logout
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      class="popup"
+                      style={{ width: '300px' }}
+                      ref={r => {
+                        setTimeout(async () => {
+                          if (!r) {
+                            return
+                          }
 
-        {this.children.map(it => (
-          <aloud-entry
-            url={this.url}
-            key={it.id}
-            parser={this.parser}
-            user={this.user}
-            entry={it}
-            api={this.api}
-            isSmallScreen={this.isSmallScreen}
-            depth={1}
-            cmTheme={this.cmTheme}
-            onDelete={evt => this.doDelete(evt.detail)}
-          ></aloud-entry>
-        ))}
+                          r.textContent = ''
 
-        {this.hasMore ? (
-          <button class="more" type="button" onClick={() => this.doLoad(true)}>
-            Click for more
-          </button>
-        ) : null}
-      </main>
+                          this.firebaseUI.start(
+                            r,
+                            this.firebaseUiConfig || {
+                              signInOptions: [
+                                window.firebase.auth.GoogleAuthProvider
+                                  .PROVIDER_ID,
+                                window.firebase.auth.EmailAuthProvider
+                                  .PROVIDER_ID,
+                                firebaseui.auth.AnonymousAuthProvider
+                                  .PROVIDER_ID
+                              ],
+                              popupMode: true
+                            }
+                          )
+                        }, 100)
+                      }}
+                      onMouseLeave={() => (this.isImageHovered = false)}
+                    />
+                  )
+                ) : null}
+                {this.user ? (
+                  <img
+                    src={this.user.image}
+                    alt={this.user.name}
+                    title={`${this.user.name} - Click to logout`}
+                  />
+                ) : (
+                  <img
+                    src="https://www.gravatar.com/avatar?d=mp"
+                    title="Click to login"
+                  />
+                )}
+              </p>
+            </figure>
+            <div class="media-content">
+              <div class="field">
+                <p class="control">
+                  <aloud-editor
+                    parser={this.parser}
+                    theme={this.cmTheme}
+                    onCmChange={ev => (this.mainEditorValue = ev.detail.value)}
+                  />
+                </p>
+              </div>
+              <nav>
+                <button
+                  class="button is-info"
+                  type="button"
+                  onClick={async () => {
+                    await this.api
+                      .post({
+                        url: this.url,
+                        authorId: this.user.id,
+                        markdown: this.mainEditorValue
+                      })
+                      .then(({ entryId }) => {
+                        this.children = [
+                          {
+                            url: this.url,
+                            parentId: null,
+                            id: entryId,
+                            author: this.user,
+                            markdown: this.mainEditorValue,
+                            isDeleted: false,
+                            createdAt: new Date(),
+                            like: [],
+                            dislike: [],
+                            bookmark: []
+                          },
+                          ...this.children
+                        ]
+                      })
+
+                    this.mainEditorValue = ''
+                  }}
+                >
+                  Submit
+                </button>
+              </nav>
+            </div>
+          </article>
+
+          {this.children.map(it => (
+            <aloud-entry
+              url={this.url}
+              key={it.id}
+              parser={this.parser}
+              user={this.user}
+              entry={it}
+              api={this.api}
+              isSmallScreen={this.isSmallScreen}
+              depth={1}
+              cmTheme={this.cmTheme}
+              onDelete={evt => this.doDelete(evt.detail)}
+            ></aloud-entry>
+          ))}
+
+          {this.hasMore ? (
+            <button
+              class="more"
+              type="button"
+              onClick={() => this.doLoad(true)}
+            >
+              Click for more
+            </button>
+          ) : null}
+        </main>
+      </Host>
     )
   }
 }
