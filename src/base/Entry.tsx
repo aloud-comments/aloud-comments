@@ -1,6 +1,6 @@
 import { EventEmitter, getAssetPath, h } from '@stencil/core'
-
 import { IApi, IAuthor, IPost, IReactionType } from '../types/base'
+
 import { humanizeDurationToNow } from '../utils/humanize'
 
 export interface Entry {
@@ -144,7 +144,7 @@ export function initEntry<T extends Entry> (cls: T): void {
                         author: cls.user,
                         parentId: cls.entry.id,
                         markdown: cls.replierValue,
-                        createdAt: new Date(),
+                        createdAt: +new Date(),
                         like: [],
                         dislike: [],
                         bookmark: []
@@ -185,7 +185,7 @@ export function initEntry<T extends Entry> (cls: T): void {
                       cls.entry = {
                         ...cls.entry,
                         markdown: cls.editorValue,
-                        updatedAt: new Date()
+                        updatedAt: +new Date()
                       }
                     }
                   })

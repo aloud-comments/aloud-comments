@@ -1,11 +1,11 @@
-import { IAuthorNormalized, IPostNormalized } from '../types/base'
 import { DebuggableAPI, cryptoRandomId } from '../types/debug'
+import { IAuthorNormalized, IPostNormalized } from '../types/base'
 
 class MyDexie extends window.Dexie {
   /**
-   * * version 4: ^0.2.8
+   * * version 5: ^0.3.0
    */
-  static version = 4;
+  static version = 5;
   static dbname = 'aloud-comments';
 
   public authors: Dexie.Table<IAuthorNormalized, string>;

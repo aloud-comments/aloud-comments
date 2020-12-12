@@ -1,9 +1,8 @@
 import { Component, Host, Prop, State, Watch, h } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
-import * as firebaseui from 'firebaseui'
 
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import { IApi, IAuthor, IPost } from '../../types/base'
+import { IApi, IAuthor, IPost, IPostNormalized } from '../../types/base'
 import { isBgDark } from '../../utils/color'
 import { DexieAPI } from '../../utils/dexie'
 import { FirebaseAPI } from '../../utils/firebase'
@@ -17,6 +16,16 @@ declare global {
     firebase: typeof import('firebase/app').default;
     /**
      * ```html
+     * <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+     * ```
+     */
+    Dexie: typeof import('dexie') & import('dexie').DexieConstructor;
+    /**
+     * Only attached to window in Debug mode.
+     */
+    isBgDark: (bgColor?: string) => boolean;
+    /**
+     * ```html
      * <script
      *   src="https://cdnjs.cloudflare.com/ajax/libs/Faker/3.1.0/faker.min.js"
      *   crossorigin="anonymous"
@@ -26,20 +35,10 @@ declare global {
     faker: typeof import('faker');
     /**
      * ```html
-     * <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
-     * ```
-     */
-    Dexie: typeof import('dexie') & import('dexie').DexieConstructor;
-    /**
-     * ```html
      * <script src="https://unpkg.com/txtgen"></script>
      * ```
      */
     txtgen: typeof import('txtgen');
-    /**
-     * Only attached to window in Debug mode.
-     */
-    isBgDark: (bgColor?: string) => boolean;
   }
 
   interface LinkHTMLAttributes {
@@ -124,11 +123,14 @@ export class AloudComments implements EntryViewer {
   @State() isSmallScreen = false;
   @State() isImageHovered = false;
   @State() isLoading = true;
+  @State() realtimeUpdates: IPostChange[] = [];
 
   firebaseUI: firebaseui.auth.AuthUI;
 
   doLoad: (forced: boolean) => void;
   doDelete: (p: { entryId: string; hasChildren: boolean }) => Promise<void>;
+
+  doOnRealtimeChange: () => Promise<void>;
 
   get limit (): number {
     return this.maxChildrenAllowed
@@ -169,21 +171,50 @@ export class AloudComments implements EntryViewer {
 
     let isFirebase = false
     const setUser = async (u: import('firebase').default.User) => {
-      this.user = u ? await this.api.getAuthor(u.email) : undefined
+      if (u) {
+        this.user = await this.api.getAuthor(u.email)
+        if (!this.user) {
+          this.user = await this.api.addAuthor({
+            name: u.displayName,
+            image: u.photoURL,
+            id: u.email
+          })
+        }
+      } else {
+        this.user = null
+      }
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      window.firebase
-        = window.firebase || (await import('firebase/app').then(r => r.default))
-      this.firebaseUI = new firebaseui.auth.AuthUI(window.firebase.auth())
+      /**
+       * Both firebase and firebaseui must come from the same source.
+       *
+       * Either both NPM, or both web.
+       *
+       * @see https://github.com/firebase/firebaseui-web/issues/536
+       */
+      // if (window.firebase) {
+      //   window.firebaseui
+      //     = window.firebaseui
+      //     || (await import(
+      //       'https://www.gstatic.com/firebasejs/ui/4.7.1/firebase-ui-auth.js'
+      //     ))
+      // } else {
+      //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      //   // @ts-ignore
+      //   window.firebase = await import('firebase/app').then(r => r.default)
+      //   window.firebaseui = _firebaseui
+      // }
+
+      isFirebase = true
+
+      this.firebaseUI = new window.firebaseui.auth.AuthUI(
+        window.firebase.auth()
+      )
 
       window.firebase.auth().onAuthStateChanged(u => {
         setUser(u)
       })
-
-      isFirebase = true
     } catch (e) {
       console.error(e)
     }
@@ -206,16 +237,80 @@ export class AloudComments implements EntryViewer {
          * window.isBgDark
          * ```
          */
-        const api = isFirebase ? new FirebaseAPI() : new DexieAPI()
-        await api.populateDebug(['/', '#/spa1', '#/spa2'])
-        this.api = api
+        if (isFirebase) {
+          const api = new FirebaseAPI({
+            faker: window.faker,
+            txtgen: window.txtgen
+          })
 
-        setTimeout(() => {
-          this.user = this.user || api.firstAuthor
-        }, 50)
+          /**
+           * Attach API early, because it is realtime
+           */
+          this.api = api
+
+          api
+            .queryPosts({
+              parentId: ''
+            })
+            .onSnapshot(s => {
+              this.realtimeUpdates = {}
+
+              s.docChanges().map(r => {
+                r.type
+
+                this.realtimeUpdates = {
+                  ...this.realtimeUpdates,
+                  [r.doc.id]: {
+                    ...(r.doc.data() as IPostNormalized),
+                    id: r.doc.id
+                  }
+                }
+              })
+
+              this.doOnRealtimeChange()
+            })
+
+          /**
+           * To populate firebase, you will need
+           *
+           * ```
+           * allow write, delete: if true;
+           * ```
+           */
+          await api
+            .populateDebug(this.debug.split(','))
+            .catch(e => console.error(e))
+
+          setTimeout(() => {
+            if (!this.children) {
+              this.onApiOrUrlChanged()
+            }
+          }, 1000)
+        } else {
+          const api = new DexieAPI({
+            faker: window.faker,
+            txtgen: window.txtgen
+          })
+
+          await api
+            .populateDebug(this.debug.split(','))
+            .catch(e => console.error(e))
+
+          /**
+           * Attach API late, because it is not realtime, and only you
+           */
+          this.api = api
+
+          setTimeout(() => {
+            this.user = this.user || api.firstAuthor
+          }, 50)
+        }
       })()
     } else {
-      const api = new FirebaseAPI()
+      const api = new FirebaseAPI({
+        faker: window.faker,
+        txtgen: window.txtgen
+      })
       this.api = api
     }
 
@@ -232,7 +327,7 @@ export class AloudComments implements EntryViewer {
 
   @Watch('api')
   @Watch('url')
-  onPropStateChanged (): void {
+  onApiOrUrlChanged (): void {
     this.isLoading = false
     this.children = []
     this.doLoad(true)
@@ -281,51 +376,69 @@ export class AloudComments implements EntryViewer {
                 class="image is-64x64 popup-container"
                 onClick={() => (this.isImageHovered = true)}
               >
-                {this.isImageHovered ? (
-                  this.user ? (
-                    <div
-                      class="popup"
-                      onMouseLeave={() => (this.isImageHovered = false)}
-                    >
-                      <button
-                        class="button is-danger"
-                        style={{ margin: '1rem' }}
-                      >
-                        Click to logout
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      class="popup"
-                      style={{ width: '300px' }}
-                      ref={r => {
-                        setTimeout(async () => {
-                          if (!r) {
-                            return
-                          }
+                <div
+                  class="popup"
+                  style={{
+                    visibility:
+                      this.user && this.isImageHovered ? 'visible' : 'hidden'
+                  }}
+                  onMouseLeave={() => (this.isImageHovered = false)}
+                >
+                  <button
+                    class="button is-danger"
+                    style={{ margin: '1rem' }}
+                    onClick={() => {
+                      window.firebase.auth().signOut()
+                    }}
+                  >
+                    Click to logout
+                  </button>
+                </div>
 
-                          r.textContent = ''
+                <div
+                  class="popup"
+                  style={{
+                    left:
+                      !this.user && this.isImageHovered ? 'initial' : '-1000px',
+                    width: '300px'
+                  }}
+                  ref={r => {
+                    setTimeout(async () => {
+                      if (!r) {
+                        return
+                      }
 
-                          this.firebaseUI.start(
-                            r,
-                            this.firebaseUiConfig || {
-                              signInOptions: [
-                                window.firebase.auth.GoogleAuthProvider
-                                  .PROVIDER_ID,
-                                window.firebase.auth.EmailAuthProvider
-                                  .PROVIDER_ID,
-                                firebaseui.auth.AnonymousAuthProvider
-                                  .PROVIDER_ID
-                              ],
-                              popupMode: true
+                      this.firebaseUI.start(
+                        r,
+                        this.firebaseUiConfig || {
+                          signInOptions: [
+                            window.firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+                            window.firebase.auth.EmailAuthProvider.PROVIDER_ID,
+                            window.firebaseui.auth.AnonymousAuthProvider
+                              .PROVIDER_ID
+                          ],
+                          signInFlow: 'popup',
+                          callbacks: {
+                            signInSuccessWithAuthResult: authResult => {
+                              console.log(authResult)
+                              return true
+                            },
+                            signInFailure: async error => {
+                              // Some unrecoverable error occurred during sign-in.
+                              // Return a promise when error handling is completed and FirebaseUI
+                              // will reset, clearing any UI. This commonly occurs for error code
+                              // 'firebaseui/anonymous-upgrade-merge-conflict' when merge conflict
+                              // occurs. Check below for more details on this.
+                              console.error(error)
                             }
-                          )
-                        }, 100)
-                      }}
-                      onMouseLeave={() => (this.isImageHovered = false)}
-                    />
-                  )
-                ) : null}
+                          }
+                        }
+                      )
+                    }, 100)
+                  }}
+                  onMouseLeave={() => (this.isImageHovered = false)}
+                />
+
                 {this.user ? (
                   <img
                     src={this.user.image}
@@ -370,7 +483,7 @@ export class AloudComments implements EntryViewer {
                             author: this.user,
                             markdown: this.mainEditorValue,
                             isDeleted: false,
-                            createdAt: new Date(),
+                            createdAt: +new Date(),
                             like: [],
                             dislike: [],
                             bookmark: []
@@ -399,6 +512,7 @@ export class AloudComments implements EntryViewer {
               isSmallScreen={this.isSmallScreen}
               depth={1}
               cmTheme={this.cmTheme}
+              realtimeUpdates={this.realtimeUpdates}
               onDelete={evt => this.doDelete(evt.detail)}
             />
           ))}

@@ -1,5 +1,3 @@
-import 'firebase/firestore'
-
 import { IAuthorNormalized, IPostNormalized } from '../types/base'
 import { DebuggableAPI } from '../types/debug'
 
@@ -7,29 +5,23 @@ type Query = import('firebase').default.firestore.Query<
   import('firebase').default.firestore.DocumentData
 >;
 
-function encodePath (str: string) {
-  return str.replace(/[^a-z0-9]/g, s => {
-    return Array.from(s)
-      .map(c => `%${c.charCodeAt(0).toString(16)};`)
-      .join('')
-  })
-}
-
-function decodePath (str: string) {
-  return str.replace(/%(.+);/g, (_, p1) => {
-    return String.fromCharCode(parseInt(p1, 16))
-  })
-}
+// function decodePath (str: string) {
+//   return str.replace(/%(.+);/g, (_, p1) => {
+//     return String.fromCharCode(parseInt(p1, 16))
+//   })
+// }
 
 export class FirebaseAPI extends DebuggableAPI {
+  firebase: typeof import('firebase').default = window.firebase;
+
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   get colAuthor () {
-    return window.firebase.firestore().collection('author')
+    return this.firebase.firestore().collection('author')
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   get colPost () {
-    return window.firebase.firestore().collection('post')
+    return this.firebase.firestore().collection('post')
   }
 
   async getAuthorIds (): Promise<string[]> {
@@ -87,12 +79,11 @@ export class FirebaseAPI extends DebuggableAPI {
     ...a
   }: Omit<IPostNormalized, 'id'> & { id?: string }): Promise<IPostNormalized> {
     if (id) {
-      await this.colPost.doc(id).set(a)
+      await this.colPost.doc(encodeURIComponent(id)).set(a)
 
       return {
         ...a,
-        url: encodePath(a.url),
-        id
+        id: encodeURIComponent(id)
       }
     }
 
@@ -100,7 +91,6 @@ export class FirebaseAPI extends DebuggableAPI {
 
     return {
       ...a,
-      url: encodePath(a.url),
       id: r.id
     }
   }
@@ -116,20 +106,17 @@ export class FirebaseAPI extends DebuggableAPI {
 
     return {
       ...r,
-      url: decodePath(r.url),
       id
     }
   }
 
-  private queryPosts (p: Partial<IPostNormalized>) {
+  public queryPosts (p: Partial<IPostNormalized>): Query {
     let q: Query = this.colPost
 
     for (const [k, v] of Object.entries<string>(
       (p as unknown) as Record<string, string>
     )) {
-      if (k === 'url') {
-        q = q.where(k, '==', encodePath(v))
-      } else {
+      if (k === 'url' || k === 'parentId') {
         q = q.where(k, '==', v)
       }
     }
@@ -170,7 +157,6 @@ export class FirebaseAPI extends DebuggableAPI {
           const d = r.data() as IPostNormalized
           result.push({
             ...d,
-            url: decodePath(d.url),
             id: r.id
           })
         })
@@ -193,10 +179,6 @@ export class FirebaseAPI extends DebuggableAPI {
     p: Partial<Omit<IPostNormalized, 'id'>>
   ): Promise<boolean> {
     try {
-      if (p.url) {
-        p.url = encodePath(p.url)
-      }
-
       await this.colPost.doc(id).update(p)
       return true
     } catch (e) {

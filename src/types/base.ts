@@ -24,8 +24,14 @@ export interface IPost extends IReaction {
   parentId: string;
   author: IAuthor;
   markdown: string;
-  createdAt: Date;
-  updatedAt?: Date;
+  /**
+   * Epoch milli
+   */
+  createdAt: number;
+  /**
+   * Epoch milli
+   */
+  updatedAt?: number;
   isDeleted?: boolean;
 }
 
@@ -70,4 +76,7 @@ export interface IApi {
     error?: string;
   }>;
   getAuthor: (id: string) => Promise<IAuthorNormalized | null>;
+  addAuthor(
+    a: Omit<IAuthorNormalized, 'id'> & { id?: string },
+  ): Promise<IAuthorNormalized>;
 }

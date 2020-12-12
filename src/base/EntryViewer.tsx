@@ -1,14 +1,24 @@
 import { EventEmitter } from '@stencil/core'
 
-import { IApi, IPost } from '../types/base'
+import { IApi, IPost, IPostNormalized } from '../types/base'
+
+export type IPostChange = {
+  type: 'added' | 'modified' | 'removed';
+  doc: {
+    id: string;
+    data: () => unknown;
+  };
+};
 
 export interface EntryViewer {
   url: string;
   api: IApi;
   entry?: IPost;
+  parentId?: string;
   children: IPost[];
   hasMore: boolean;
   limit: number;
+  realtimeUpdates: IPostChange[];
 
   childrenCountChanged?: EventEmitter<{
     entryId: string;
@@ -17,6 +27,8 @@ export interface EntryViewer {
 
   doLoad: (forced: boolean) => void;
   doDelete: (p: { entryId: string; hasChildren: boolean }) => Promise<void>;
+
+  doOnRealtimeChange: () => Promise<void>;
 }
 
 export function initEntryViewer<T extends EntryViewer> (cls: T): void {
@@ -81,5 +93,24 @@ export function initEntryViewer<T extends EntryViewer> (cls: T): void {
         }
       }
     })
+  }
+
+  cls.doOnRealtimeChange = async (): Promise<void> => {
+    const cs = new Map<string, IPostNormalized>()
+
+    cls.children.map(c => {
+      const it = cls.realtimeUpdates[c.id]
+      if (it) {
+        oldIds.add(c.id)
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { authorId: _, ...a } = it
+        cs.push({ ...c, ...a })
+      } else {
+        cs.push(c)
+      }
+    })
+
+    cls.children = cs
   }
 }

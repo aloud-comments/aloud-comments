@@ -5,13 +5,20 @@ import {
   Host,
   Prop,
   State,
+  Watch,
   h
 } from '@stencil/core'
-import { HTMLStencilElement } from '@stencil/core/internal'
-
 import { Entry, initEntry } from '../../base/Entry'
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import { IApi, IAuthor, IPost, IReactionType } from '../../types/base'
+import {
+  IApi,
+  IAuthor,
+  IPost,
+  IPostNormalized,
+  IReactionType
+} from '../../types/base'
+
+import { HTMLStencilElement } from '@stencil/core/internal'
 
 /**
  * @internal
@@ -39,6 +46,9 @@ export class AloudEntry implements EntryViewer, Entry {
   };
 
   @Prop() isSmallScreen!: boolean;
+  @Prop() realtimeUpdates!: {
+    [id: string]: IPostNormalized;
+  };
 
   @Event() delete!: EventEmitter<{
     entryId: string;
@@ -72,6 +82,8 @@ export class AloudEntry implements EntryViewer, Entry {
   doLoad: (forced: boolean) => void;
   doDelete: (p: { entryId: string; hasChildren: boolean }) => Promise<void>;
 
+  doOnRealtimeChange: () => Promise<void>;
+
   get subEntriesLength (): number {
     return Array.from(this.subEntries.values()).reduce(
       (prev, c) => prev + c.count,
@@ -91,6 +103,11 @@ export class AloudEntry implements EntryViewer, Entry {
     initEntryViewer(this)
     initEntry(this)
     this.doLoad(false)
+  }
+
+  @Watch('realtimeUpdates')
+  onRealtimeChange (): void {
+    this.doOnRealtimeChange()
   }
 
   render (): HTMLStencilElement {
@@ -190,6 +207,7 @@ export class AloudEntry implements EntryViewer, Entry {
                 totalSubEntriesLength={this.subEntriesLength}
                 countChangedListener={this.subEntryCountListener}
                 cmTheme={this.cmTheme}
+                realtimeUpdates={this.realtimeUpdates}
                 onDelete={evt => this.doDelete(evt.detail)}
                 onChildrenCountChanged={evt =>
                   this.subEntryCountListener(evt.detail)
@@ -205,6 +223,7 @@ export class AloudEntry implements EntryViewer, Entry {
                 depth={this.depth + 1}
                 isSmallScreen={this.isSmallScreen}
                 cmTheme={this.cmTheme}
+                realtimeUpdates={this.realtimeUpdates}
                 onDelete={evt => this.doDelete(evt.detail)}
               ></aloud-entry>
             )

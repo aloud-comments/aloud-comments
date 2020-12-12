@@ -6,13 +6,20 @@ import {
   Method,
   Prop,
   State,
+  Watch,
   h
 } from '@stencil/core'
-import { HTMLStencilElement } from '@stencil/core/internal'
-
 import { Entry, initEntry } from '../../base/Entry'
 import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import { IApi, IAuthor, IPost, IReactionType } from '../../types/base'
+import {
+  IApi,
+  IAuthor,
+  IPost,
+  IPostNormalized,
+  IReactionType
+} from '../../types/base'
+
+import { HTMLStencilElement } from '@stencil/core/internal'
 
 /**
  * @internal
@@ -48,6 +55,10 @@ export class AloudSubEntry implements EntryViewer, Entry {
   @Prop() totalSubEntriesLength!: number;
   @Prop() isSmallScreen!: boolean;
 
+  @Prop() realtimeUpdates!: {
+    [id: string]: IPostNormalized;
+  };
+
   @Event() childrenCountChanged!: EventEmitter<{
     entryId: string;
     count: number;
@@ -68,6 +79,9 @@ export class AloudSubEntry implements EntryViewer, Entry {
 
   doLoad: (forced: boolean) => void;
   doDelete: (p: { entryId: string; hasChildren: boolean }) => Promise<void>;
+
+  doOnRealtimeChange: () => Promise<void>;
+
   getReaction: (r: IReactionType) => string[];
   setReaction: (r: IReactionType) => Promise<void>;
   getSmallNav: (showAuthor: boolean) => HTMLElement;
@@ -81,6 +95,11 @@ export class AloudSubEntry implements EntryViewer, Entry {
   @Method()
   async getChildren (): Promise<IPost[]> {
     return this.children
+  }
+
+  @Watch('realtimeUpdates')
+  onRealtimeChange (): void {
+    this.doOnRealtimeChange()
   }
 
   render (): HTMLStencilElement {
@@ -167,6 +186,7 @@ export class AloudSubEntry implements EntryViewer, Entry {
             totalSubEntriesLength={this.totalSubEntriesLength}
             countChangedListener={this.countChangedListener}
             cmTheme={this.cmTheme}
+            realtimeUpdates={this.realtimeUpdates}
             onDelete={evt => this.doDelete(evt.detail)}
             onChildrenCountChanged={evt =>
               this.countChangedListener(evt.detail)

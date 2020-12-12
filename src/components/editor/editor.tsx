@@ -16,8 +16,9 @@ import {
   State,
   h
 } from '@stencil/core'
-import { HTMLStencilElement } from '@stencil/core/internal'
+
 import CodeMirror from 'codemirror'
+import { HTMLStencilElement } from '@stencil/core/internal'
 
 /**
  * @internal
