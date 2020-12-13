@@ -130,7 +130,7 @@ export class FirebaseAPI extends DebuggableAPI {
       after,
       limit = 3
     }: {
-      after?: string;
+      after?: number;
       limit: number;
     }
   ): Promise<{
@@ -142,7 +142,7 @@ export class FirebaseAPI extends DebuggableAPI {
     q = q.orderBy('createdAt', 'desc')
 
     if (after) {
-      q = q.startAfter(after)
+      q = q.where('createdAt', '>', after)
     }
 
     let totalCountLeft = await q.get().then(r => r.docs.length)

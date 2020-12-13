@@ -42,7 +42,7 @@ export abstract class DebuggableAPI implements IApi {
   protected abstract findPosts(
     p: Partial<IPostNormalized>,
     opts: {
-      after?: string;
+      after?: number;
       limit: number;
     },
   ): Promise<{

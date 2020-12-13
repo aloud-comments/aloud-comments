@@ -4,10 +4,9 @@ import { IApi, IPost, IPostNormalized } from '../types/base'
 
 export type IPostChange = {
   type: 'added' | 'modified' | 'removed';
-  doc: {
-    id: string;
-    data: () => unknown;
-  };
+  id: string;
+  // Unfold data first
+  data: unknown;
 };
 
 export interface EntryViewer {
@@ -20,6 +19,9 @@ export interface EntryViewer {
   limit: number;
   realtimeUpdates: IPostChange[];
 
+  isVisible: boolean;
+  visibleObserver: IntersectionObserver;
+
   childrenCountChanged?: EventEmitter<{
     entryId: string;
     count: number;
@@ -31,10 +33,26 @@ export interface EntryViewer {
   doOnRealtimeChange: () => Promise<void>;
 }
 
-export function initEntryViewer<T extends EntryViewer> (cls: T): void {
+export function initEntryViewer<T extends EntryViewer> (
+  cls: T,
+  $el: HTMLElement
+): void {
+  cls.visibleObserver = new IntersectionObserver(
+    cs =>
+      cs.map(c => {
+        cls.isVisible = c.isIntersecting
+      }),
+    {
+      threshold: 0.1
+    }
+  )
+  cls.visibleObserver.observe($el)
+
   cls.doLoad = (forced: boolean) => {
-    if (!forced && !cls.limit) {
-      return
+    if (!forced) {
+      if (!cls.limit || !cls.isVisible) {
+        return
+      }
     }
 
     if (!cls.api) {
@@ -45,7 +63,7 @@ export function initEntryViewer<T extends EntryViewer> (cls: T): void {
       .get({
         url: cls.url,
         parentId: cls.entry ? cls.entry.id : null,
-        after: cls.children[cls.children.length - 1]?.id,
+        after: cls.children[cls.children.length - 1]?.createdAt,
         limit: cls.limit
       })
       .then(({ result, hasMore }) => {
@@ -96,21 +114,42 @@ export function initEntryViewer<T extends EntryViewer> (cls: T): void {
   }
 
   cls.doOnRealtimeChange = async (): Promise<void> => {
-    const cs = new Map<string, IPostNormalized>()
+    const cs: IPost[] = []
 
     cls.children.map(c => {
-      const it = cls.realtimeUpdates[c.id]
+      const it = cls.realtimeUpdates.find(r => r.id === c.id)
+      console.log(it)
       if (it) {
-        oldIds.add(c.id)
-
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { authorId: _, ...a } = it
-        cs.push({ ...c, ...a })
+        if (it.type === 'modified') {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { authorId: _, ...a } = it.data as Omit<IPostNormalized, 'id'>
+          cs.push({ ...c, ...a })
+        }
+        // else 'removed'
       } else {
         cs.push(c)
       }
     })
 
-    cls.children = cs
+    const prevIds = new Set(cs.map(c => c.id))
+
+    await Promise.all(
+      cls.realtimeUpdates
+        .filter(r => r.type === 'added')
+        .map(async it => {
+          if (prevIds.has(it.id)) {
+            prevIds.add(it.id)
+
+            const { authorId, ...a } = it.data as Omit<IPostNormalized, 'id'>
+            cs.push({
+              ...a,
+              id: it.id,
+              author: await cls.api.getAuthor(authorId)
+            })
+          }
+        })
+    )
+
+    cls.children = cs.sort((i1, i2) => i2.createdAt - i1.createdAt)
   }
 }

@@ -1,5 +1,6 @@
 import {
   Component,
+  Element,
   Event,
   EventEmitter,
   Host,
@@ -9,17 +10,15 @@ import {
   Watch,
   h
 } from '@stencil/core'
-import { Entry, initEntry } from '../../base/Entry'
-import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import {
-  IApi,
-  IAuthor,
-  IPost,
-  IPostNormalized,
-  IReactionType
-} from '../../types/base'
-
 import { HTMLStencilElement } from '@stencil/core/internal'
+
+import { Entry, initEntry } from '../../base/Entry'
+import {
+  EntryViewer,
+  IPostChange,
+  initEntryViewer
+} from '../../base/EntryViewer'
+import { IApi, IAuthor, IPost, IReactionType } from '../../types/base'
 
 /**
  * @internal
@@ -55,9 +54,7 @@ export class AloudSubEntry implements EntryViewer, Entry {
   @Prop() totalSubEntriesLength!: number;
   @Prop() isSmallScreen!: boolean;
 
-  @Prop() realtimeUpdates!: {
-    [id: string]: IPostNormalized;
-  };
+  @Prop() realtimeUpdates!: IPostChange[];
 
   @Event() childrenCountChanged!: EventEmitter<{
     entryId: string;
@@ -77,7 +74,12 @@ export class AloudSubEntry implements EntryViewer, Entry {
   @State() editorValue = '';
   @State() replierValue = '';
 
-  doLoad: (forced: boolean) => void;
+  @Element() $el: HTMLElement;
+
+  isVisible = false;
+  visibleObserver: IntersectionObserver;
+
+  doLoad: (after: boolean) => void;
   doDelete: (p: { entryId: string; hasChildren: boolean }) => Promise<void>;
 
   doOnRealtimeChange: () => Promise<void>;
@@ -86,8 +88,8 @@ export class AloudSubEntry implements EntryViewer, Entry {
   setReaction: (r: IReactionType) => Promise<void>;
   getSmallNav: (showAuthor: boolean) => HTMLElement;
 
-  constructor () {
-    initEntryViewer(this)
+  componentWillLoad (): void {
+    initEntryViewer(this, this.$el)
     initEntry(this)
     this.doLoad(false)
   }

@@ -1,5 +1,5 @@
-import { DebuggableAPI, cryptoRandomId } from '../types/debug'
 import { IAuthorNormalized, IPostNormalized } from '../types/base'
+import { DebuggableAPI, cryptoRandomId } from '../types/debug'
 
 class MyDexie extends window.Dexie {
   /**
@@ -104,7 +104,7 @@ export class DexieAPI extends DebuggableAPI {
       after,
       limit = 3
     }: {
-      after?: string;
+      after?: number;
       limit: number;
     }
   ): Promise<{
@@ -113,7 +113,7 @@ export class DexieAPI extends DebuggableAPI {
   }> {
     let out = await this.db.posts.where(p).reverse().sortBy('createdAt')
 
-    const i = after ? out.map(({ id }) => id).indexOf(after) : -1
+    const i = after ? out.map(({ createdAt }) => createdAt).indexOf(after) : -1
     if (i !== -1) {
       out = out.slice(i + 1)
     }

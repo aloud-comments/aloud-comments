@@ -1,8 +1,12 @@
-import { Component, Host, Prop, State, Watch, h } from '@stencil/core'
+import { Component, Element, Host, Prop, State, Watch, h } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 
-import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import { IApi, IAuthor, IPost, IPostNormalized } from '../../types/base'
+import {
+  EntryViewer,
+  IPostChange,
+  initEntryViewer
+} from '../../base/EntryViewer'
+import { IApi, IAuthor, IPost } from '../../types/base'
 import { isBgDark } from '../../utils/color'
 import { DexieAPI } from '../../utils/dexie'
 import { FirebaseAPI } from '../../utils/firebase'
@@ -116,6 +120,11 @@ export class AloudComments implements EntryViewer {
   })
   theme: 'dark' | 'light' = 'light';
 
+  @Element() $el: HTMLElement;
+
+  isVisible = true;
+  visibleObserver: IntersectionObserver;
+
   @State() user?: IAuthor;
   @State() children: IPost[] = [];
   @State() mainEditorValue = '';
@@ -136,11 +145,9 @@ export class AloudComments implements EntryViewer {
     return this.maxChildrenAllowed
   }
 
-  constructor () {
-    initEntryViewer(this)
-  }
-
   async componentWillLoad (): Promise<void> {
+    initEntryViewer(this, this.$el)
+
     {
       const mq = matchMedia('(max-width: 600px)')
 
@@ -248,27 +255,18 @@ export class AloudComments implements EntryViewer {
            */
           this.api = api
 
-          api
-            .queryPosts({
-              parentId: ''
-            })
-            .onSnapshot(s => {
-              this.realtimeUpdates = {}
-
-              s.docChanges().map(r => {
-                r.type
-
-                this.realtimeUpdates = {
-                  ...this.realtimeUpdates,
-                  [r.doc.id]: {
-                    ...(r.doc.data() as IPostNormalized),
-                    id: r.doc.id
-                  }
-                }
-              })
-
-              this.doOnRealtimeChange()
-            })
+          // api
+          //   .queryPosts({
+          //     parentId: ''
+          //   })
+          //   .onSnapshot(s => {
+          //     this.realtimeUpdates = s.docChanges().map(r => ({
+          //       ...r,
+          //       id: r.doc.id,
+          //       data: r.doc.data()
+          //     }))
+          //     this.doOnRealtimeChange()
+          //   })
 
           /**
            * To populate firebase, you will need
@@ -280,12 +278,6 @@ export class AloudComments implements EntryViewer {
           await api
             .populateDebug(this.debug.split(','))
             .catch(e => console.error(e))
-
-          setTimeout(() => {
-            if (!this.children) {
-              this.onApiOrUrlChanged()
-            }
-          }, 1000)
         } else {
           const api = new DexieAPI({
             faker: window.faker,
@@ -321,8 +313,6 @@ export class AloudComments implements EntryViewer {
     }
 
     this.parser = this.parser || new ShowdownParser()
-
-    this.doLoad(true)
   }
 
   @Watch('api')
@@ -404,7 +394,7 @@ export class AloudComments implements EntryViewer {
                   }}
                   ref={r => {
                     setTimeout(async () => {
-                      if (!r) {
+                      if (!r || !this.firebaseUI) {
                         return
                       }
 

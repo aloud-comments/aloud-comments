@@ -1,5 +1,6 @@
 import {
   Component,
+  Element,
   Event,
   EventEmitter,
   Host,
@@ -8,17 +9,15 @@ import {
   Watch,
   h
 } from '@stencil/core'
-import { Entry, initEntry } from '../../base/Entry'
-import { EntryViewer, initEntryViewer } from '../../base/EntryViewer'
-import {
-  IApi,
-  IAuthor,
-  IPost,
-  IPostNormalized,
-  IReactionType
-} from '../../types/base'
-
 import { HTMLStencilElement } from '@stencil/core/internal'
+
+import { Entry, initEntry } from '../../base/Entry'
+import {
+  EntryViewer,
+  IPostChange,
+  initEntryViewer
+} from '../../base/EntryViewer'
+import { IApi, IAuthor, IPost, IReactionType } from '../../types/base'
 
 /**
  * @internal
@@ -46,9 +45,12 @@ export class AloudEntry implements EntryViewer, Entry {
   };
 
   @Prop() isSmallScreen!: boolean;
-  @Prop() realtimeUpdates!: {
-    [id: string]: IPostNormalized;
-  };
+  @Prop() realtimeUpdates!: IPostChange[];
+
+  @Element() $el: HTMLElement;
+
+  isVisible = false;
+  visibleObserver: IntersectionObserver;
 
   @Event() delete!: EventEmitter<{
     entryId: string;
@@ -99,10 +101,10 @@ export class AloudEntry implements EntryViewer, Entry {
     return 2
   }
 
-  constructor () {
-    initEntryViewer(this)
+  componentWillLoad (): void {
+    initEntryViewer(this, this.$el)
     initEntry(this)
-    this.doLoad(false)
+    this.doLoad(true)
   }
 
   @Watch('realtimeUpdates')

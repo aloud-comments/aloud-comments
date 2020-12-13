@@ -44,7 +44,10 @@ export interface IApi {
   get: (p: {
     url: string;
     parentId: string | null;
-    after?: string;
+    /**
+     * after createdAt
+     */
+    after?: number;
     limit?: number;
   }) => Promise<{
     result: IPost[];
