@@ -1,3 +1,5 @@
+import 'https://www.gstatic.com/firebasejs/ui/4.7.1/firebase-ui-auth.js'
+
 import { Component, Element, Host, Prop, State, Watch, h } from '@stencil/core'
 import { HTMLStencilElement } from '@stencil/core/internal'
 
@@ -8,7 +10,6 @@ import {
 } from '../../base/EntryViewer'
 import { IApi, IAuthor, IPost } from '../../types/base'
 import { isBgDark } from '../../utils/color'
-import { DexieAPI } from '../../utils/dexie'
 import { FirebaseAPI } from '../../utils/firebase'
 import { ShowdownParser } from '../../utils/parser'
 
@@ -255,18 +256,18 @@ export class AloudComments implements EntryViewer {
            */
           this.api = api
 
-          // api
-          //   .queryPosts({
-          //     parentId: ''
-          //   })
-          //   .onSnapshot(s => {
-          //     this.realtimeUpdates = s.docChanges().map(r => ({
-          //       ...r,
-          //       id: r.doc.id,
-          //       data: r.doc.data()
-          //     }))
-          //     this.doOnRealtimeChange()
-          //   })
+          api
+            .queryPosts({
+              url: this.url
+            })
+            .onSnapshot(s => {
+              this.realtimeUpdates = s.docChanges().map(r => ({
+                type: r.type,
+                id: r.doc.id,
+                data: r.doc.data()
+              }))
+              this.doOnRealtimeChange()
+            })
 
           /**
            * To populate firebase, you will need
@@ -279,6 +280,8 @@ export class AloudComments implements EntryViewer {
             .populateDebug(this.debug.split(','))
             .catch(e => console.error(e))
         } else {
+          const { DexieAPI } = await import('../../utils/dexie')
+
           const api = new DexieAPI({
             faker: window.faker,
             txtgen: window.txtgen
@@ -409,8 +412,8 @@ export class AloudComments implements EntryViewer {
                           ],
                           signInFlow: 'popup',
                           callbacks: {
-                            signInSuccessWithAuthResult: authResult => {
-                              console.log(authResult)
+                            signInSuccessWithAuthResult: () => {
+                              this.isImageHovered = false
                               return true
                             },
                             signInFailure: async error => {
@@ -426,7 +429,7 @@ export class AloudComments implements EntryViewer {
                       )
                     }, 100)
                   }}
-                  onMouseLeave={() => (this.isImageHovered = false)}
+                  // onMouseLeave={() => (this.isImageHovered = false)}
                 />
 
                 {this.user ? (

@@ -5,12 +5,6 @@ type Query = import('firebase').default.firestore.Query<
   import('firebase').default.firestore.DocumentData
 >;
 
-// function decodePath (str: string) {
-//   return str.replace(/%(.+);/g, (_, p1) => {
-//     return String.fromCharCode(parseInt(p1, 16))
-//   })
-// }
-
 export class FirebaseAPI extends DebuggableAPI {
   firebase: typeof import('firebase').default = window.firebase;
 
@@ -142,7 +136,7 @@ export class FirebaseAPI extends DebuggableAPI {
     q = q.orderBy('createdAt', 'desc')
 
     if (after) {
-      q = q.where('createdAt', '>', after)
+      q = q.startAfter(after)
     }
 
     let totalCountLeft = await q.get().then(r => r.docs.length)

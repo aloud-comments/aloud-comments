@@ -1,10 +1,9 @@
-import { execSync } from 'child_process'
-
 import { Config } from '@stencil/core'
+import { execSync } from 'child_process'
 import { sass } from '@stencil/sass'
 
 execSync(/* shell */ `
-cp -fr www/js ./demo || true
+cp -fr www/js firebase-app/public || true
 `)
 
 export const config: Config = {
@@ -22,7 +21,7 @@ export const config: Config = {
     },
     {
       type: 'www',
-      copy: [{ src: '../demo/js', dest: 'js' }],
+      copy: [{ src: '../firebase-app/public/js', dest: 'js' }],
       serviceWorker: null // disable service workers
     }
   ],

@@ -118,7 +118,6 @@ export function initEntryViewer<T extends EntryViewer> (
 
     cls.children.map(c => {
       const it = cls.realtimeUpdates.find(r => r.id === c.id)
-      console.log(it)
       if (it) {
         if (it.type === 'modified') {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
